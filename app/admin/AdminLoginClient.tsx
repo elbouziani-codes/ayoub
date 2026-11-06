@@ -25,7 +25,7 @@ const words = {
     loginError: "We couldn’t sign you in. Please try again shortly.", rateLimit: "Too many sign-in attempts. Please wait before trying again.",
     retryIn: "Try again in", seconds: "seconds", unavailable: "Password sign-in is currently unavailable. Use an authorized ChatGPT account or contact the store administrator.",
     denied: "This account does not have administrator access.", signedInAs: "Signed in as", signOut: "Sign out of ChatGPT", opening: "Opening your workspace…",
-    forgotPassword: "Forgot your password?", accountUpdated: "Your account has been updated. Sign in with your new details.", passwordReset: "Your password has been reset. Sign in with your new password.",
+    accountUpdated: "Your account has been updated. Sign in with your new details.", passwordReset: "Your password has been reset. Sign in with your new password.",
   },
   fr: {
     language: "Langue", security: "Administration sécurisée", title: "Le sens du détail.",
@@ -37,7 +37,7 @@ const words = {
     loginError: "Connexion impossible. Veuillez réessayer dans un instant.", rateLimit: "Trop de tentatives de connexion. Patientez avant de réessayer.",
     retryIn: "Réessayez dans", seconds: "secondes", unavailable: "La connexion par mot de passe est indisponible. Utilisez un compte ChatGPT autorisé ou contactez l’administrateur de la boutique.",
     denied: "Ce compte n’a pas accès à l’administration.", signedInAs: "Connecté en tant que", signOut: "Se déconnecter de ChatGPT", opening: "Ouverture de votre espace…",
-    forgotPassword: "Mot de passe oublié ?", accountUpdated: "Votre compte a été mis à jour. Connectez-vous avec vos nouveaux identifiants.", passwordReset: "Votre mot de passe a été réinitialisé. Connectez-vous avec le nouveau mot de passe.",
+    accountUpdated: "Votre compte a été mis à jour. Connectez-vous avec vos nouveaux identifiants.", passwordReset: "Votre mot de passe a été réinitialisé. Connectez-vous avec le nouveau mot de passe.",
   },
   ar: {
     language: "اللغة", security: "إدارة آمنة", title: "وراء كل تفصيل.",
@@ -49,7 +49,7 @@ const words = {
     loginError: "تعذر تسجيل الدخول. حاول مجدداً بعد قليل.", rateLimit: "محاولات تسجيل الدخول كثيرة. يُرجى الانتظار قبل إعادة المحاولة.",
     retryIn: "يمكنك المحاولة بعد", seconds: "ثانية", unavailable: "تسجيل الدخول بكلمة المرور غير متاح حالياً. استخدم حساب ChatGPT مصرحاً له أو تواصل مع مسؤول المتجر.",
     denied: "هذا الحساب غير مصرح له بإدارة المتجر.", signedInAs: "تم تسجيل الدخول باسم", signOut: "تسجيل الخروج من ChatGPT", opening: "جارٍ فتح مساحة متجرك…",
-    forgotPassword: "نسيت كلمة المرور؟", accountUpdated: "تم تحديث حسابك. سجّل الدخول بمعلوماتك الجديدة.", passwordReset: "تمت إعادة تعيين كلمة المرور. سجّل الدخول بكلمة المرور الجديدة.",
+    accountUpdated: "تم تحديث حسابك. سجّل الدخول بمعلوماتك الجديدة.", passwordReset: "تمت إعادة تعيين كلمة المرور. سجّل الدخول بكلمة المرور الجديدة.",
   },
 };
 
@@ -169,7 +169,6 @@ export default function AdminLoginClient({ initialLanguage = "fr" }: { initialLa
           {session?.passwordLoginAvailable ? <form className="adm-login-form" onSubmit={signIn} aria-busy={submitting}>
             <label className="adm-login-field" htmlFor="admin-email"><span>{t.email}</span><input id="admin-email" name="email" type="email" inputMode="email" autoComplete="username" autoCapitalize="none" spellCheck={false} dir="ltr" maxLength={254} required value={email} onChange={event => setEmail(event.target.value)} disabled={submitting} aria-invalid={error === "invalidCredentials"} aria-describedby={error ? "admin-login-error" : undefined} /></label>
             <div className="adm-login-field"><label htmlFor="admin-password">{t.password}</label><div className="adm-login-password"><input id="admin-password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" autoCapitalize="none" spellCheck={false} dir="ltr" maxLength={256} required value={password} onChange={event => setPassword(event.target.value)} disabled={submitting} aria-invalid={error === "invalidCredentials"} aria-describedby={error ? "admin-login-error" : undefined} /><button type="button" onClick={() => setShowPassword(current => !current)} aria-label={showPassword ? t.hidePassword : t.showPassword} aria-pressed={showPassword} disabled={submitting}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
-            <Link href="/admin/reset-password" className="adm-text-button">{t.forgotPassword}</Link>
             {error && <p id="admin-login-error" className="adm-login-error" role="alert">{t[error]}</p>}
             <button type="submit" className="adm-button adm-button-primary adm-login-submit" disabled={submitting || retrySeconds > 0}>{submitting ? <LoaderCircle size={17} className="adm-spin" /> : <LockKeyhole size={17} />}{submitting ? t.signingIn : t.signIn}</button>
             {retrySeconds > 0 && <p className="adm-login-countdown" role="status" aria-live="off">{t.retryIn} {new Intl.NumberFormat(lang).format(retrySeconds)} {t.seconds}</p>}
