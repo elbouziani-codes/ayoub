@@ -8,6 +8,7 @@ import {
   type ReactNode,
   type FormEvent,
 } from "react";
+import Image from "next/image";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -90,6 +91,11 @@ const CITIES = [
   "Laâyoune",
   "Dakhla",
 ];
+const hexopsCredit = {
+  en: { label: "Developed by", visit: "Visit HexOps" },
+  fr: { label: "Développé par", visit: "Visiter HexOps" },
+  ar: { label: "طوّرته", visit: "زيارة HexOps" },
+};
 
 function Brand() {
   return (
@@ -500,8 +506,18 @@ export default function Storefront({
         .includes(query.toLowerCase().trim()),
     )
     .slice(0, 8);
-  const heroProducts = products.filter((p) => p.featured).slice(0, 3);
-  const hero = heroProducts[heroIndex] || products[0];
+  const heroProducts = products.filter((p) => p.featured);
+  const heroCount = heroProducts.length;
+  useEffect(() => {
+    if (heroCount < 2) return;
+    const timer = window.setInterval(() => {
+      if (motionPaused || overlay || document.hidden || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      setHeroIndex((index) => (index + 1) % heroCount);
+    }, 6500);
+    return () => window.clearInterval(timer);
+  }, [heroCount, motionPaused, overlay]);
+  const currentHeroIndex = heroProducts.length ? heroIndex % heroProducts.length : 0;
+  const hero = heroProducts[currentHeroIndex] || products[0];
   const money = (n: number) => formatMoney(n, locale);
   const currency = locale === "ar" ? "درهم" : "MAD";
   const HeroHeading = initialProduct ? "h2" : "h1";
@@ -784,33 +800,11 @@ export default function Storefront({
                 {t("explore3d")}
               </button>
             </div>
-            <div className="hero-note">
-              <div className="mini-watches">
-                {["watch-hero", "watch-gold", "watch-blue"].map((s) => (
-                  <span className="mini-watch" key={s}>
-                    <img
-                      src={`/images/${s}-80.webp`}
-                      alt=""
-                      width="30"
-                      height="30"
-                    />
-                  </span>
-                ))}
-              </div>
-              <span className="note-line" />
-              <p>
-                <strong>{t("thoughtful")}</strong>
-                {t("madeFor")}
-              </p>
-            </div>
           </div>
           <div className="hero-visual hero-interactive">
             <div className="hero-aura" />
             <div className="orbit" />
             <div className="hero-orbit-ring" aria-hidden="true" />
-            <div className="hero-coordinate" aria-hidden="true">
-              DESIGN Nº 001 <span>33°35′ N · 7°37′ W</span>
-            </div>
             <div className="hero-spec">
               {t("precision")}
               <strong>
@@ -838,11 +832,11 @@ export default function Storefront({
               <div className="hero-glint" aria-hidden="true" />
             </div>
             <div className="hero-index">
-              <b>0{heroIndex + 1}</b>
-              <i />0{Math.max(heroProducts.length, 1)}
+              <b>{String(currentHeroIndex + 1).padStart(2, "0")}</b>
+              <i />{String(Math.max(heroCount, 1)).padStart(2, "0")}
             </div>
             {hero && (
-              <LiquidGlass className="floating-product glass">
+              <LiquidGlass key={hero.id} className="floating-product glass">
                 <div>
                   <div className="eyebrow">{t("featured")}</div>
                   <h3>{productName(hero, locale)}</h3>
@@ -867,8 +861,8 @@ export default function Storefront({
                 <button
                   key={p.id}
                   aria-label={productName(p, locale)}
-                  aria-pressed={heroIndex === i}
-                  className={heroIndex === i ? "active" : ""}
+                  aria-pressed={currentHeroIndex === i}
+                  className={currentHeroIndex === i ? "active" : ""}
                   onClick={() => setHeroIndex(i)}
                 />
               ))}
@@ -1308,6 +1302,11 @@ export default function Storefront({
             <p>
               © {new Date().getFullYear()} {t("copyright")}
             </p>
+            <a className="hexops-credit" href="https://hexops.pro" target="_blank" rel="noopener noreferrer" aria-label={`${hexopsCredit[locale].label} HexOps — ${hexopsCredit[locale].visit}`}>
+              <Image src="/images/hexops-icon.ico" alt="" width={25} height={25} unoptimized />
+              <span>{hexopsCredit[locale].label} <strong>HexOps</strong></span>
+              <ArrowUpRight size={13} aria-hidden="true" />
+            </a>
             <div>
               <span>
                 <i className="morocco-dot" /> {t("morocco")}
@@ -1318,6 +1317,9 @@ export default function Storefront({
           </div>
         </div>
       </footer>
+      <a className="hexops-float" href="https://hexops.pro" target="_blank" rel="noopener noreferrer" aria-label={hexopsCredit[locale].visit} title="HexOps" inert={overlay ? true : undefined}>
+        <Image src="/images/hexops-icon.ico" alt="" width={27} height={27} unoptimized />
+      </a>
 
       {overlay === "cart" && (
         <Modal

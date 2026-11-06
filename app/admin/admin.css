@@ -83,6 +83,24 @@
 .adm-metric > strong { font-size: 29px; font-weight: 500; line-height: 1.2; letter-spacing: -1px; }
 .adm-metric > p { color: #6c768c; font-size: 8px; margin-top: 11px; }
 .adm-panel { min-width: 0; max-width: 100%; background: linear-gradient(140deg, #11151e, #0e1119); border: 1px solid #ffffff0b; border-radius: 10px; overflow: hidden; }
+.adm-hero-picker { padding: 23px; margin-bottom: 22px; }
+.adm-hero-picker-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
+.adm-hero-picker-head h2 { font-size: 18px; font-weight: 600; margin-top: 8px; }
+.adm-hero-picker-head p { color: #929bad; margin-top: 8px; max-width: 620px; font-size: 11px; line-height: 1.6; }
+.adm-hero-count { display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; padding: 8px 11px; border: 1px solid #6199ee40; border-radius: 20px; background: #4d8dff13; color: #accaff; font-size: 10px; }
+.adm-hero-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(205px, 1fr)); gap: 10px; }
+.adm-hero-option { display: flex; align-items: center; gap: 11px; min-width: 0; min-height: 71px; padding: 10px; text-align: start; border: 1px solid #ffffff16; border-radius: 9px; color: #aeb9cb; background: #ffffff04; transition: border-color .2s, background .2s; }
+.adm-hero-option:hover, .adm-hero-option:focus-visible { border-color: #719ff08c; background: #6499ed14; }
+.adm-hero-option.selected { border-color: #6e9ee968; background: #4d8dff14; color: #c9ddff; }
+.adm-hero-option .adm-product-image { flex: 0 0 auto; }
+.adm-hero-option > span:nth-child(2) { min-width: 0; flex: 1; }
+.adm-hero-option strong, .adm-hero-option small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-hero-option strong { font-size: 11px; font-weight: 600; }
+.adm-hero-option small { margin-top: 4px; color: #8498b5; font-size: 9px; }
+.adm-hero-option > svg:last-child { color: #84aaf0; }
+.adm-hero-empty { margin-top: 15px !important; color: #adbacd; font-size: 10px; }
+@media (max-width: 650px) { .adm-hero-picker { padding: 17px; } .adm-hero-picker-head { flex-direction: column; gap: 11px; } .adm-hero-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } .adm-hero-option { min-height: 65px; gap: 7px; padding: 7px; } .adm-hero-option .adm-product-image { width: 38px; height: 42px; } .adm-hero-option strong { font-size: 9px; } .adm-hero-option small { font-size: 8px; } }
+@media (max-width: 420px) { .adm-hero-options { grid-template-columns: 1fr; } }
 .adm-content-editor { padding: 28px; }
 .adm-content-intro h2 { font-size: 18px; font-weight: 600; }
 .adm-content-intro p { color: #929bad; max-width: 700px; margin-top: 8px; line-height: 1.7; }

@@ -676,6 +676,29 @@
   .storefront .product-card:hover .product-photo img { transform: none; }
 }
 
+/* Rotating hero, larger service promises, and HexOps attribution. */
+.storefront .hero-watch { animation: hero-swap-in .72s cubic-bezier(.2,.75,.2,1) both, watch-levitate 7s ease-in-out .72s infinite; }
+.storefront .floating-product { animation: hero-card-in .55s ease-out both; }
+@keyframes hero-swap-in { from { opacity: 0; transform: translate3d(38px, 12px, 30px) scale(.93) rotate(-11deg); } to { opacity: 1; transform: translate3d(0, 0, 30px) scale(1) rotate(-16deg); } }
+@keyframes hero-card-in { from { opacity: 0; translate: 0 12px; } to { opacity: 1; translate: 0 0; } }
+.storefront .benefit > svg { width: 30px; height: 30px; }
+.storefront .benefit strong { font-size: 13px; line-height: 1.4; }
+.storefront .benefit p { font-size: 11px; line-height: 1.5; }
+.hexops-credit { display: inline-flex; align-items: center; gap: 8px; color: #9fb6d7; font-size: 10px; text-decoration: none; transition: color .2s ease; }
+.hexops-credit:hover { color: #d8e8ff; }
+.hexops-credit img { width: 25px; height: 25px; border-radius: 7px; box-shadow: 0 0 13px #7baaff38; }
+.hexops-credit strong { color: #d9e9ff; font-weight: 650; }
+.hexops-credit svg { width: 13px; height: 13px; }
+.hexops-float { position: fixed; z-index: 50; inset-inline-end: 20px; bottom: 20px; display: grid; place-items: center; width: 52px; height: 52px; border: 1px solid #9ac9ff8c; border-radius: 50%; background: radial-gradient(circle at 30% 22%, #294b7b, #0e1a2e 68%); box-shadow: 0 0 0 5px #72aaff10, 0 0 24px #69a8ff55, 0 10px 26px #0009; animation: hexops-glow 3s ease-in-out infinite; transition: transform .2s ease; }
+.hexops-float:hover, .hexops-float:focus-visible { transform: translateY(-3px) scale(1.08); }
+.hexops-float img { width: 27px; height: 27px; border-radius: 7px; }
+@keyframes hexops-glow { 50% { box-shadow: 0 0 0 8px #72aaff16, 0 0 32px #78b4ff9c, 0 10px 26px #0009; } }
+@media (max-width: 1100px) { .storefront .benefit strong { font-size: 11px; } .storefront .benefit p { font-size: 9px; } }
+@media (max-width: 760px) { .storefront .benefit > svg { width: 26px; height: 26px; } .storefront .benefit strong { font-size: 11px; } .storefront .benefit p { font-size: 9.5px; } .hexops-float { bottom: calc(83px + env(safe-area-inset-bottom)); width: 48px; height: 48px; } .hexops-credit { font-size: 9px; } }
+.storefront[data-motion='paused'] .hexops-float { animation-play-state: paused; }
+.storefront[data-motion='paused'] .hero-watch, .storefront[data-motion='paused'] .floating-product { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .storefront .hero-watch, .storefront .floating-product, .hexops-float { animation: none; } }
+
 /* Accessible, compact controls added with the interaction upgrade. */
 .filter-chips{display:flex;gap:8px;flex-wrap:wrap;margin:-6px 0 22px}.filter-chips button{display:inline-flex;align-items:center;gap:8px;min-height:34px;padding:6px 11px;background:#8abaff0d;border:1px solid #8abaff25;border-radius:20px;color:#a9c7ee;font-size:10px}.filter-chips button:hover{background:#8abaff18}.search-shortcut{color:#7086a7;font-size:10px;text-align:center;padding:0 18px 14px}.toast-stack button{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;padding:7px 10px;margin-inline-start:10px;color:#c1dcff;border:1px solid #87b7f43b;background:#87b7f410;border-radius:6px;font-size:10px}.toast-stack button:hover{background:#87b7f422}.storefront [inert] *, .storefront [inert] *::before,.storefront [inert] *::after{animation-play-state:paused!important}
 @media(max-width:600px){.toast-stack{max-width:calc(100vw - 30px);width:max-content;font-size:11px}.toast-stack button{font-size:9px;margin-inline-start:3px;padding:6px 8px}}
