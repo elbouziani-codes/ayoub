@@ -1,25 +1,21 @@
 import Storefront from "@/components/storefront";
 import { listProducts } from "@/lib/server/catalog";
-import { cookies } from "next/headers";
-import type { Locale } from "@/lib/i18n";
+import { getRequestLocale, homeStructuredData, serializeJsonLd } from "@/lib/seo";
+import type { Product } from "@/lib/types";
 export const dynamic = "force-dynamic";
 export default async function Home() {
-  const saved = (await cookies()).get("ayoub-language")?.value;
-  const locale: Locale = saved === "fr" || saved === "ar" ? saved : "en";
+  const locale = await getRequestLocale();
+  let products: Product[] = [];
+  let catalogUnavailable = false;
   try {
-    return (
-      <Storefront
-        initialProducts={await listProducts()}
-        initialLocale={locale}
-      />
-    );
+    products = await listProducts();
   } catch {
-    return (
-      <Storefront
-        initialProducts={[]}
-        catalogUnavailable
-        initialLocale={locale}
-      />
-    );
+    catalogUnavailable = true;
   }
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(homeStructuredData(products, locale)) }} />
+      <Storefront initialProducts={products} catalogUnavailable={catalogUnavailable} initialLocale={locale} />
+    </>
+  );
 }

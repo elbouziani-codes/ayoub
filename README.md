@@ -31,14 +31,15 @@ Open the URL printed by the server. The portable development integration signs i
 
 ## Architecture
 
-- **UI:** React 19, TypeScript, Vinext/Next-compatible App Router, Lucide icons, custom responsive CSS and reusable glass surfaces.
+- **UI:** React 19, TypeScript, Vinext/Next-compatible App Router, Lucide icons, responsive liquid glass surfaces, pointer lighting, reveal transitions, and keyboard-accessible dialogs with inert backgrounds.
+- **3D atelier:** A procedural Three.js watch design study with three finishes, dial/profile/caseback views, drag, zoom, reset, and keyboard controls. It is clearly distinguished from actual catalog products. The renderer loads near the viewport, caps pixel ratio and frame rate, pauses offscreen or in hidden tabs, disposes resources, and falls back to a product image when WebGL is unavailable. System reduced-motion preferences and a persistent global motion switch stop animation while keeping manual inspection available.
 - **Backend:** Cloudflare Workers with server-side API authorization and Zod validation.
 - **Records:** Cloudflare D1, schema in `db/schema.ts`, generated SQL in `drizzle/`.
-- **Uploads:** Cloudflare R2; up to eight PNG/JPEG/WebP images per product, each at most 5 MiB. SVG and remote image URLs are rejected. Original images can be reordered or removed from a product without breaking historical order snapshots.
+- **Uploads:** Cloudflare R2; up to eight PNG/JPEG/WebP images per product, each at most 5 MiB. The admin browser decodes photos, preserves their aspect ratio, caps the longest edge at 1600 px, and encodes WebP at quality 0.85. A smaller original is retained only when it already meets the dimension limit. Browsers without WebP encoding use a resized PNG fallback; when image encoding is unavailable, only an original already within the dimension and size limits can be uploaded. Filenames are preserved and server-side MIME/signature checks and the 5 MiB limit still apply. SVG and remote image URLs are rejected. Gallery images can be reordered or removed without breaking historical order snapshots. Existing uploads are unchanged.
 - **Authentication:** Sites gateway sign-in, plus a server-side `ADMIN_EMAILS` allowlist. An empty allowlist denies all administration. There are no default production passwords and no first-user ownership claims.
 - **Locales:** English, French, Arabic with RTL. Language persists in a cookie and local storage; initial storefront rendering honors the cookie. Product translations can be edited in administration.
-- **SEO:** Server-rendered catalog/product content, product metadata and JSON-LD, sitemap, robots rules, favicon, social metadata. Administration and APIs are excluded from indexing.
-- **Performance:** WebP product images (about 625 KiB total for four assets), lazy loading below the hero, eager hero image, immutable caching for uploads, dynamic HTML cache protection.
+- **SEO:** Localized server-rendered catalog/product content, individual canonical URLs, localized social metadata, OnlineStore/Product/Offer/Breadcrumb JSON-LD using actual catalog prices and inventory, sitemap dates, and robots rules. Administration and general APIs are excluded from crawling; product image endpoints remain crawlable. Cookie-selected translations share URLs, so hreflang alternatives are deliberately omitted.
+- **Performance:** Self-hosted variable WOFF2 fonts, responsive 400/800/1100px product images, 80px thumbnails, lazy images below the eager hero, deferred 3D code, immutable caching for uploads, and protected dynamic HTML caching. The four 400px catalog images total 95,886 bytes versus 638,304 bytes for their previous 1100px WebP originals (84.98% smaller). This is an asset comparison, not a Lighthouse or page-speed score.
 
 ### Source map
 
@@ -46,12 +47,16 @@ Open the URL printed by the server. The portable development integration signs i
 | --- | --- |
 | `components/storefront.tsx` | Storefront, catalog interactions, dialogs, bag, checkout, tracking |
 | `app/globals.css` | Visual tokens, liquid glass, responsive/RTL/reduced-motion styles |
+| `app/upgrade.css` | Cinematic hero, navigation, catalog, and commerce styling |
+| `components/watch-showroom.tsx`, `components/watch-scene.ts` | Accessible 3D controls and deferred WebGL renderer |
+| `hooks/use-store-motion.ts` | Visibility-aware reveals, scroll progress, pointer lighting |
 | `app/admin/` | Protected dashboard, products, inventory, images, order management |
 | `app/api/` | Validated catalog, checkout, tracking, administration and images |
 | `lib/server/` | Authentication, database access, commerce logic, rate limiting, transactions |
 | `lib/catalog.ts` | One-time initial catalog data |
 | `lib/i18n.ts` | Storefront translations and localized formatting |
 | `lib/shop-config.ts` | Public shop origin and WhatsApp support number |
+| `lib/seo.ts`, `lib/product-images.ts` | Server metadata/structured data and responsive image URLs |
 | `db/`, `drizzle/` | Database schema and versioned schema-only migrations |
 | `tests/` | Commerce, transaction, concurrency and live local API verification |
 
@@ -73,6 +78,7 @@ Tracking requires both the order number and a strong private code. Only the code
 npm run typecheck
 npm test
 npm run test:integration -- http://127.0.0.1:5173
+node tests/seo.test.mjs http://127.0.0.1:5173
 npm run build
 ```
 
@@ -81,6 +87,8 @@ The 16 commerce/SQLite tests cover Moroccan phone validation, shipping, input bo
 The 13 live local integration checks exercise real development authentication cookies, D1, R2 uploads and retrieval, ETags, product CRUD and image ordering, stale-version rejection, checkout, replay conflicts, privacy-safe tracking, order transitions, cancellation, pagination and archival. The script refuses non-loopback URLs. It creates clearly marked local fixtures, archives its product, and retains local test orders for auditing.
 
 Browser QA also covered a real local checkout and receipt, private tracking, admin sign-in and cancellation, Arabic RTL, and a 390-pixel mobile viewport. Test data never needs to be copied to the hosted database.
+
+The nine read-only rendered SEO checks verify server-rendered content, canonical uniqueness, live offers, French/Arabic metadata, policy pages, missing-page noindex, crawl rules, and sitemap dates. A private hosting gate prevents public search indexing regardless of the application metadata. Lighthouse and real-user Core Web Vitals must be measured on the deployed public store before claiming a numeric performance or SEO score.
 
 ## Hosting and merchant settings
 

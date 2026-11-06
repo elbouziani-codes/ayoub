@@ -1,22 +1,21 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cookies } from "next/headers";
 import { dictionaries, type TranslationKey } from "@/lib/i18n";
+import { getRequestLocale, pageMetadata } from "@/lib/seo";
 export const dynamic = "force-dynamic";
+const policies = ["terms", "privacy", "shipping"] as const;
+const isPolicy = (policy: string): policy is typeof policies[number] => policies.some((value) => value === policy);
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ policy: string }>;
 }): Promise<Metadata> {
   const { policy } = await params;
-  return {
-    title:
-      policy === "privacy"
-        ? "Privacy policy"
-        : policy === "terms"
-          ? "Terms & conditions"
-          : "Shipping & delivery",
-  };
+  const locale = await getRequestLocale();
+  if (!isPolicy(policy)) return { title: "Page not found", robots: { index: false, follow: true } };
+  const d = dictionaries[locale];
+  return pageMetadata({ locale, title: d[policy], description: d[`${policy}Policy`], path: `/policies/${policy}` });
 }
 export default async function Policy({
   params,
@@ -24,9 +23,8 @@ export default async function Policy({
   params: Promise<{ policy: string }>;
 }) {
   const { policy } = await params;
-  if (!["terms", "privacy", "shipping"].includes(policy)) notFound();
-  const saved = (await cookies()).get("ayoub-language")?.value;
-  const lang = saved === "fr" || saved === "ar" ? saved : "en";
+  if (!isPolicy(policy)) notFound();
+  const lang = await getRequestLocale();
   const d = dictionaries[lang];
   return (
     <main
@@ -34,9 +32,9 @@ export default async function Policy({
       dir={lang === "ar" ? "rtl" : "ltr"}
       style={{ maxWidth: 760, paddingTop: 70, paddingBottom: 100 }}
     >
-      <a className="text-link" href="/">
+      <Link className="text-link" href="/" prefetch={false}>
         ← AYOUB SHOP
-      </a>
+      </Link>
       <h1 style={{ fontSize: 38, margin: "35px 0" }}>
         {d[policy as TranslationKey]}
       </h1>

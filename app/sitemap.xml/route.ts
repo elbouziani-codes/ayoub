@@ -1,16 +1,22 @@
 import { listProducts } from "@/lib/server/catalog";
+import { SITE_URL } from "@/lib/shop-config";
+
+const escapeXml = (value: string) => value.replace(/[<>&'\"]/g, (character) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '\"': "&quot;" })[character]!);
+
 export async function GET() {
-  const base = "https://ayoub-shop-watches.splendidelderberry1.chatgpt.site";
   const products = await listProducts();
-  const paths = [
-    "/",
-    "/policies/shipping",
-    "/policies/privacy",
-    "/policies/terms",
-    ...products.map((p) => `/products/${p.slug}`),
+  const paths: { path: string; updatedAt?: string }[] = [
+    { path: "/" },
+    { path: "/policies/shipping" },
+    { path: "/policies/privacy" },
+    { path: "/policies/terms" },
+    ...products.map((product) => ({ path: `/products/${encodeURIComponent(product.slug)}`, updatedAt: product.updatedAt })),
   ];
   return new Response(
-    `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${paths.map((path) => `<url><loc>${base}${path}</loc></url>`).join("")}</urlset>`,
+    `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${paths.map(({ path, updatedAt }) => {
+      const modified = updatedAt && Number.isFinite(Date.parse(updatedAt)) ? `<lastmod>${new Date(updatedAt).toISOString()}</lastmod>` : "";
+      return `<url><loc>${escapeXml(new URL(path, SITE_URL).href)}</loc>${modified}</url>`;
+    }).join("")}</urlset>`,
     {
       headers: {
         "Content-Type": "application/xml; charset=utf-8",

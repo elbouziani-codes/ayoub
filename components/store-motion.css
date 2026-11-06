@@ -1,0 +1,94 @@
+/* Content is visible by default; observers progressively enable the motion. */
+.motion-ready [data-reveal] {
+  transition: opacity 700ms var(--ease), translate 700ms var(--ease), transform 320ms var(--ease), border-color 300ms ease, box-shadow 300ms ease;
+  transition-delay: var(--reveal-delay, 0ms), var(--reveal-delay, 0ms), 0ms, 0ms, 0ms;
+}
+.motion-ready [data-reveal]:not(.is-revealed) {
+  opacity: 0;
+  translate: 0 24px;
+}
+.motion-ready [data-reveal].is-revealed {
+  opacity: 1;
+  translate: 0 0;
+}
+.motion-ready [data-reveal]:focus-within {
+  opacity: 1;
+  translate: none;
+  transition: none;
+}
+.hero-interactive {
+  --hero-x: 0;
+  --hero-y: 0;
+}
+.tilt-surface.product-card {
+  transform: perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transition: transform 480ms var(--ease), border-color 300ms ease, box-shadow 300ms ease, opacity 700ms var(--ease), translate 700ms var(--ease);
+}
+.tilt-surface.product-card::after {
+  content: "";
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(ellipse at var(--shine-x, 50%) var(--shine-y, 0%), #b8d7ff15, transparent 60%);
+  transition: opacity 400ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .tilt-surface.product-card:hover {
+    transform: perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateY(-5px);
+  }
+  .tilt-surface.product-card[data-tilting="true"] {
+    transition-duration: 110ms, 300ms, 300ms, 700ms, 700ms;
+  }
+  .tilt-surface.product-card[data-tilting="true"]::after { opacity: 1; }
+}
+.quick-add:active { transform: scale(.9); }
+.primary-btn:active, .secondary-btn:active { transform: translateY(1px) scale(.985); }
+.modal:not(.drawer) { animation: storefront-modal-in 380ms var(--ease) both; }
+.modal.drawer { animation: storefront-drawer-in 440ms var(--ease) both; }
+[dir="rtl"] .modal.drawer { animation-name: storefront-drawer-in-rtl; }
+.toast-stack { animation: storefront-toast-in 380ms var(--ease) both; }
+@keyframes storefront-modal-in {
+  from { opacity: 0; transform: translateY(22px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes storefront-drawer-in {
+  from { opacity: .7; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes storefront-drawer-in-rtl {
+  from { opacity: .7; transform: translateX(-100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes storefront-toast-in {
+  from { opacity: 0; transform: translate(-50%, 12px) scale(.96); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+.motion-suspended *, .motion-suspended *::before, .motion-suspended *::after {
+  animation-play-state: paused !important;
+}
+[data-motion="paused"] *, [data-motion="paused"] *::before, [data-motion="paused"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+[data-motion="paused"] [data-reveal] { opacity: 1 !important; translate: none !important; }
+[data-motion="paused"] .tilt-surface.product-card,
+[data-motion="paused"] .tilt-surface.product-card:hover { transform: none !important; }
+[data-motion="paused"] .tilt-surface.product-card::after { opacity: 0 !important; }
+[data-motion="paused"] .product-card .product-photo img { transform: none !important; }
+html:has([data-motion="paused"]) { scroll-behavior: auto; }
+@media (prefers-reduced-motion: reduce) {
+  .storefront *, .storefront *::before, .storefront *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .motion-ready [data-reveal] { opacity: 1 !important; translate: none !important; }
+  .tilt-surface.product-card, .tilt-surface.product-card:hover { transform: none !important; }
+  .tilt-surface.product-card::after { opacity: 0 !important; }
+  .product-card .product-photo img { transform: none !important; }
+  .modal, .modal.drawer, .toast-stack { animation: none !important; }
+}

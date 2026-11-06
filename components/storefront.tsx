@@ -34,9 +34,16 @@ import {
   RotateCcw,
   Gem,
   MessageCircle,
+  Box,
+  Pause,
+  Play,
 } from "lucide-react";
 import { SUPPORT_URL } from "@/lib/shop-config";
+import { productImageSet, productThumbnail } from "@/lib/product-images";
 import LiquidGlass from "./liquid-glass";
+import WatchShowroom from "./watch-showroom";
+import TiltSurface from "./tilt-surface";
+import { useStoreMotion } from "@/hooks/use-store-motion";
 import type { Product, TrackedOrder, Order } from "@/lib/types";
 import {
   dictionaries,
@@ -125,9 +132,10 @@ function Modal({
     const original = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const el = panel.current;
-    const initial = el?.querySelector<HTMLElement>(
-      "input:not([type=hidden]),button,a[href],select,textarea",
-    );
+    const initial =
+      el?.querySelector<HTMLElement>(
+        "input:not([type=hidden]),select,textarea",
+      ) ?? el?.querySelector<HTMLElement>("button,a[href]");
     initial?.focus();
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") close.current();
@@ -197,6 +205,9 @@ export default function Storefront({
   initialLocale?: Locale;
 }) {
   const [locale, setLocale] = useState<Locale>(initialLocale);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [motionPaused, setMotionPaused] = useState(false);
+  useStoreMotion(rootRef, motionPaused);
   const d = dictionaries[locale];
   const t = (k: TranslationKey) => d[k];
   const [products, setProducts] = useState(initialProducts);
@@ -238,6 +249,7 @@ export default function Storefront({
   const idempotency = useRef<{ payload: string; key: string } | null>(null);
   useEffect(() => {
     try {
+      setMotionPaused(localStorage.getItem("ayoub-motion") === "paused");
       const l = localStorage.getItem("ayoub-language");
       if (l === "en" || l === "fr" || l === "ar") setLocale(l);
       const c = JSON.parse(localStorage.getItem("ayoub-cart") || "[]");
@@ -272,6 +284,26 @@ export default function Storefront({
     if (params.get("track")) setOverlay("track");
   }, []);
   useEffect(() => {
+    if (ready)
+      try {
+        localStorage.setItem(
+          "ayoub-motion",
+          motionPaused ? "paused" : "enabled",
+        );
+      } catch {}
+  }, [motionPaused, ready]);
+  useEffect(() => {
+    function shortcut(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setOverlay((current) => (current === "search" ? null : "search"));
+        setError("");
+      }
+    }
+    document.addEventListener("keydown", shortcut);
+    return () => document.removeEventListener("keydown", shortcut);
+  }, []);
+  useEffect(() => {
     document.documentElement.lang = locale;
     document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
     if (ready) {
@@ -303,6 +335,14 @@ export default function Storefront({
     setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(""), 3300);
+  };
+  const holdToast = () => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+  };
+  const resumeToast = () => {
+    holdToast();
+    if (!document.activeElement?.closest(".toast-stack"))
+      toastTimer.current = setTimeout(() => setToast(""), 3300);
   };
   const close = () => {
     setOverlay(null);
@@ -387,19 +427,21 @@ export default function Storefront({
     setDetailQty(1);
     open("product");
   };
+  const scrollToSection = (id: string) => {
+    const reduced =
+      motionPaused ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document
+      .getElementById(id)
+      ?.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
+  };
   const browse = (cat = "All", all = true) => {
     setCategory(cat);
     setSavedOnly(false);
     setShowAll(all);
     setMobileNav(false);
     setOverlay(null);
-    setTimeout(
-      () =>
-        document
-          .getElementById("collection")
-          ?.scrollIntoView({ behavior: "smooth" }),
-      20,
-    );
+    setTimeout(() => scrollToSection("collection"), 20);
   };
   const resetFilters = () => {
     setCategory("All");
@@ -456,6 +498,8 @@ export default function Storefront({
   const hero = heroProducts[heroIndex] || products[0];
   const money = (n: number) => formatMoney(n, locale);
   const currency = locale === "ar" ? "درهم" : "MAD";
+  const HeroHeading = initialProduct ? "h2" : "h1";
+  const ProductHeading = initialProduct ? "h1" : "h2";
   const Price = ({ product: p }: { product: Product }) => (
     <span className="product-price">
       {money(p.price)} <small>{currency}</small>
@@ -582,13 +626,18 @@ export default function Storefront({
           : t("story");
 
   return (
-    <div className="storefront" dir={locale === "ar" ? "rtl" : "ltr"}>
+    <div
+      ref={rootRef}
+      className="storefront"
+      dir={locale === "ar" ? "rtl" : "ltr"}
+      data-motion={motionPaused ? "paused" : "enabled"}
+    >
       <div className="announcement">
         <Truck />
         <span>{t("freeTop")}</span>
         <span>{t("codTop")}</span>
       </div>
-      <header className="nav-header">
+      <header className="nav-header" inert={overlay ? true : undefined}>
         <div className="nav container">
           <Brand />
           <nav className="nav-links" aria-label="Main navigation">
@@ -596,7 +645,10 @@ export default function Storefront({
               {t("home")}
             </a>
             <button onClick={() => browse()}>{t("watches")}</button>
-            <a href="#collections">{t("collections")}</a>
+            <a href="#showroom" className="nav-showroom">
+              <Box size={13} />
+              {t("showroomNav")}
+            </a>
             <button
               onClick={() => {
                 setSort("featured");
@@ -621,6 +673,15 @@ export default function Storefront({
             </select>
             <span className="nav-separator" />
             <button
+              className="icon-button motion-toggle"
+              onClick={() => setMotionPaused((value) => !value)}
+              aria-label={t(motionPaused ? "enableMotion" : "pauseMotion")}
+              title={t(motionPaused ? "enableMotion" : "pauseMotion")}
+              aria-pressed={motionPaused}
+            >
+              {motionPaused ? <Play /> : <Pause />}
+            </button>
+            <button
               className="icon-button"
               aria-label={t("search")}
               onClick={() => open("search")}
@@ -634,9 +695,7 @@ export default function Storefront({
                 setSavedOnly(true);
                 setShowAll(true);
                 setCategory("All");
-                document
-                  .getElementById("collection")
-                  ?.scrollIntoView({ behavior: "smooth" });
+                scrollToSection("collection");
               }}
             >
               <Heart />
@@ -665,6 +724,9 @@ export default function Storefront({
         {mobileNav && (
           <nav className="mobile-nav-panel">
             <button onClick={() => browse()}>{t("watches")}</button>
+            <a href="#showroom" onClick={() => setMobileNav(false)}>
+              <Box size={15} /> {t("showroomNav")}
+            </a>
             <a href="#collections" onClick={() => setMobileNav(false)}>
               {t("collections")}
             </a>
@@ -678,7 +740,7 @@ export default function Storefront({
                 setShowAll(true);
                 setCategory("All");
                 setMobileNav(false);
-                document.getElementById("collection")?.scrollIntoView();
+                scrollToSection("collection");
               }}
             >
               {t("wishlist")} ({favorites.length})
@@ -686,18 +748,22 @@ export default function Storefront({
             <button onClick={() => open("track")}>{t("track")}</button>
           </nav>
         )}
+        <div className="scroll-progress" aria-hidden="true" />
       </header>
-      <main>
+      <main inert={overlay ? true : undefined}>
         <section className="hero container" aria-labelledby="hero-title">
+          <span className="hero-watermark" aria-hidden="true">
+            AYOUB
+          </span>
           <div className="hero-copy">
             <div className="hero-badge">
               <span className="blue-dot" />
               {t("heroBadge")}
             </div>
-            <h1 id="hero-title">
+            <HeroHeading id="hero-title" className="hero-title">
               {t("heroLine1")}
               <span>{t("heroLine2")}</span>
-            </h1>
+            </HeroHeading>
             <p className="hero-description">{t("heroDesc")}</p>
             <div className="hero-ctas">
               <button className="primary-btn" onClick={() => browse()}>
@@ -705,11 +771,11 @@ export default function Storefront({
                 <ArrowUpRight />
               </button>
               <button
-                className="secondary-btn"
-                onClick={() => browse("All", false)}
+                className="secondary-btn showroom-link"
+                onClick={() => scrollToSection("showroom")}
               >
-                {t("explore")}
-                <ArrowRight />
+                <Box />
+                {t("explore3d")}
               </button>
             </div>
             <div className="hero-note">
@@ -717,7 +783,7 @@ export default function Storefront({
                 {["watch-hero", "watch-gold", "watch-blue"].map((s) => (
                   <span className="mini-watch" key={s}>
                     <img
-                      src={`/images/${s}.webp`}
+                      src={`/images/${s}-80.webp`}
                       alt=""
                       width="30"
                       height="30"
@@ -732,28 +798,39 @@ export default function Storefront({
               </p>
             </div>
           </div>
-          <div className="hero-visual">
+          <div className="hero-visual hero-interactive">
             <div className="hero-aura" />
             <div className="orbit" />
+            <div className="hero-orbit-ring" aria-hidden="true" />
+            <div className="hero-coordinate" aria-hidden="true">
+              DESIGN Nº 001 <span>33°35′ N · 7°37′ W</span>
+            </div>
             <div className="hero-spec">
               {t("precision")}
               <strong>
                 {hero?.caseSize || "42 mm"} · {t("steel")}
               </strong>
             </div>
-            <img
-              key={hero?.id || "hero"}
-              className="hero-watch"
-              src={hero?.images[0] || "/images/watch-hero.webp"}
-              alt={
-                hero
-                  ? productName(hero, locale)
-                  : "Silver and black chronograph watch"
-              }
-              fetchPriority="high"
-              width="1254"
-              height="1254"
-            />
+            <div className="hero-watch-stage">
+              <img
+                key={hero?.id || "hero"}
+                className="hero-watch"
+                src={hero?.images[0] || "/images/watch-hero.webp"}
+                srcSet={productImageSet(
+                  hero?.images[0] || "/images/watch-hero.webp",
+                )}
+                sizes="(max-width: 760px) 400px, (max-width: 1100px) 500px, 640px"
+                alt={
+                  hero
+                    ? productName(hero, locale)
+                    : "Silver and black chronograph watch"
+                }
+                fetchPriority="high"
+                width="1254"
+                height="1254"
+              />
+              <div className="hero-glint" aria-hidden="true" />
+            </div>
             <div className="hero-index">
               <b>0{heroIndex + 1}</b>
               <i />0{Math.max(heroProducts.length, 1)}
@@ -796,8 +873,22 @@ export default function Storefront({
             {t("discover")}
           </a>
         </section>
+        <div className="signature-marquee" aria-hidden="true">
+          <div className="marquee-track">
+            {Array.from({ length: 4 }, (_, i) => (
+              <span className="marquee-set" key={i}>
+                <span>{t("marquee1")}</span>
+                <Gem />
+                <span>{t("marquee2")}</span>
+                <span className="marquee-star">✳</span>
+                <span>{t("marquee3")}</span>
+                <Gem />
+              </span>
+            ))}
+          </div>
+        </div>
         <div className="container">
-          <section className="benefit-bar" aria-label={t("help")}>
+          <section className="benefit-bar" aria-label={t("help")} data-reveal>
             {[
               [Truck, "delivery", "deliverySub"],
               [Banknote, "payDelivery", "payDeliverySub"],
@@ -817,7 +908,7 @@ export default function Storefront({
             })}
           </section>
           <section id="collection" aria-labelledby="collection-title">
-            <div className="section-heading">
+            <div className="section-heading" data-reveal>
               <div>
                 <div className="eyebrow">
                   <span>01 /</span>
@@ -935,14 +1026,49 @@ export default function Storefront({
                 </button>
               </div>
             )}
+            {(minPrice || maxPrice || stockOnly) && (
+              <div className="filter-chips" aria-label={t("filters")}>
+                {minPrice && (
+                  <button onClick={() => setMinPrice("")}>
+                    {t("minPrice")}: {money(Number(minPrice))}
+                    <X size={12} />
+                  </button>
+                )}
+                {maxPrice && (
+                  <button onClick={() => setMaxPrice("")}>
+                    {t("maxPrice")}: {money(Number(maxPrice))}
+                    <X size={12} />
+                  </button>
+                )}
+                {stockOnly && (
+                  <button onClick={() => setStockOnly(false)}>
+                    {t("stockOnly")}
+                    <X size={12} />
+                  </button>
+                )}
+                <button onClick={resetFilters}>{t("reset")}</button>
+              </div>
+            )}
             <div className="product-grid">
-              {visible.map((p) => (
-                <article key={p.id} className="product-card">
+              {visible.map((p, index) => (
+                <TiltSurface
+                  key={p.id}
+                  className="product-card"
+                  disabled={motionPaused}
+                  data-reveal
+                  data-reveal-index={index % 4}
+                >
                   {p.badge && (
                     <span
                       className={`product-badge ${p.category === "Limited" ? "limited" : ""}`}
                     >
-                      {p.category === "Limited" ? t("Limited") : p.badge}
+                      {p.category === "Limited"
+                        ? t("Limited")
+                        : p.badge.toLowerCase() === "new"
+                          ? t("new")
+                          : p.badge.toLowerCase() === "bestseller"
+                            ? t("bestseller")
+                            : p.badge}
                     </span>
                   )}
                   <button
@@ -957,17 +1083,27 @@ export default function Storefront({
                     href={`/products/${p.slug}`}
                     className="product-photo"
                     onClick={(e) => {
+                      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
+                        return;
                       e.preventDefault();
                       selectProduct(p);
                     }}
                   >
                     <img
                       src={p.images[0] || "/images/watch-hero.webp"}
+                      srcSet={productImageSet(
+                        p.images[0] || "/images/watch-hero.webp",
+                      )}
+                      sizes="(max-width: 440px) 168px, (max-width: 760px) 205px, (max-width: 1020px) 290px, (max-width: 1230px) 210px, 234px"
                       alt={productName(p, locale)}
                       width="350"
                       height="350"
                       loading="lazy"
                     />
+                    <span className="product-preview-link">
+                      {t("exploreDetails")}
+                      <ArrowUpRight size={13} />
+                    </span>
                   </a>
                   <div className="product-info">
                     <div className="product-category">{t(p.category)}</div>
@@ -975,6 +1111,8 @@ export default function Storefront({
                       href={`/products/${p.slug}`}
                       className="product-title"
                       onClick={(e) => {
+                        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
+                          return;
                         e.preventDefault();
                         selectProduct(p);
                       }}
@@ -989,16 +1127,17 @@ export default function Storefront({
                     <div className="product-bottom">
                       <Price product={p} />
                       <button
-                        className="quick-add"
+                        className="quick-add has-label"
                         onClick={() => add(p)}
                         disabled={!p.stock}
                         aria-label={`${t(p.stock ? "addCart" : "soldOut")}: ${productName(p, locale)}`}
                       >
                         {p.stock ? <Plus /> : <X />}
+                        <span>{t(p.stock ? "addCart" : "soldOut")}</span>
                       </button>
                     </div>
                   </div>
-                </article>
+                </TiltSurface>
               ))}
               {!visible.length && !catalogError && (
                 <div className="empty-state">
@@ -1029,10 +1168,17 @@ export default function Storefront({
               </div>
             )}
           </section>
-          <section className="editorial" id="collections">
+          <WatchShowroom
+            locale={locale}
+            paused={motionPaused || Boolean(overlay)}
+            onShop={() => browse()}
+          />
+          <section className="editorial" id="collections" data-reveal>
             <div className="editorial-image">
               <img
                 src="/images/watch-blue.webp"
+                srcSet={productImageSet("/images/watch-blue.webp")}
+                sizes="(max-width: 760px) calc(100vw - 36px), 700px"
                 alt={
                   locale === "ar"
                     ? "تفاصيل ساعة زرقاء"
@@ -1075,7 +1221,7 @@ export default function Storefront({
               </button>
             </div>
           </section>
-          <section className="values">
+          <section className="values" data-reveal>
             {[
               [Watch, "value1", "value1Desc"],
               [Gem, "value2", "value2Desc"],
@@ -1095,7 +1241,7 @@ export default function Storefront({
               );
             })}
           </section>
-          <section className="faq-section">
+          <section className="faq-section" data-reveal>
             <div className="faq-header">
               <div className="eyebrow">{t("faqTag")}</div>
               <h2>{t("faqTitle")}</h2>
@@ -1115,7 +1261,7 @@ export default function Storefront({
           </section>
         </div>
       </main>
-      <footer className="footer">
+      <footer className="footer" inert={overlay ? true : undefined}>
         <div className="container">
           <div className="footer-grid">
             <div className="footer-about">
@@ -1218,7 +1364,9 @@ export default function Storefront({
                   <div className="cart-line" key={item.productId}>
                     <div className="cart-image">
                       <img
-                        src={p?.images[0] || "/images/watch-hero.webp"}
+                        src={productThumbnail(
+                          p?.images[0] || "/images/watch-hero.webp",
+                        )}
                         alt={p ? productName(p, locale) : t("soldOut")}
                         width="70"
                         height="88"
@@ -1305,6 +1453,10 @@ export default function Storefront({
               <div className="detail-image">
                 <img
                   src={selected.images[imageIndex] || "/images/watch-hero.webp"}
+                  srcSet={productImageSet(
+                    selected.images[imageIndex] || "/images/watch-hero.webp",
+                  )}
+                  sizes="(max-width: 760px) calc(100vw - 70px), 450px"
                   alt={productName(selected, locale)}
                   width="500"
                   height="500"
@@ -1319,7 +1471,12 @@ export default function Storefront({
                       onClick={() => setImageIndex(i)}
                       aria-label={`${t("productDetails")} ${i + 1}`}
                     >
-                      <img src={src} alt="" width="55" height="55" />
+                      <img
+                        src={productThumbnail(src)}
+                        alt=""
+                        width="55"
+                        height="55"
+                      />
                     </button>
                   ))}
                 </div>
@@ -1330,7 +1487,9 @@ export default function Storefront({
                 <span className="blue-dot" />
                 {t(selected.category)}
               </div>
-              <h2>{productName(selected, locale)}</h2>
+              <ProductHeading className="detail-product-title">
+                {productName(selected, locale)}
+              </ProductHeading>
               <p className="product-subtitle">
                 {locale === "en"
                   ? selected.subtitle
@@ -1548,7 +1707,12 @@ export default function Storefront({
               </h3>
               {activeLines.map(({ item, product: p }) => (
                 <div className="summary-item" key={p.id}>
-                  <img src={p.images[0]} alt="" width="37" height="49" />
+                  <img
+                    src={productThumbnail(p.images[0])}
+                    alt=""
+                    width="37"
+                    height="49"
+                  />
                   <div>
                     <strong>{productName(p, locale)}</strong>
                     <span>
@@ -1806,6 +1970,7 @@ export default function Storefront({
             )}
           </div>
           <p className="search-hint">{t("searchHint")}</p>
+          <p className="search-shortcut">{t("searchShortcut")}</p>
           <div className="search-results">
             {searchResults.map((p) => (
               <button
@@ -1813,7 +1978,12 @@ export default function Storefront({
                 key={p.id}
                 onClick={() => selectProduct(p)}
               >
-                <img src={p.images[0]} alt="" width="45" height="60" />
+                <img
+                  src={productThumbnail(p.images[0])}
+                  alt=""
+                  width="45"
+                  height="60"
+                />
                 <div>
                   <h3>{productName(p, locale)}</h3>
                   <p>
@@ -1855,9 +2025,24 @@ export default function Storefront({
         </Modal>
       )}
       {toast && (
-        <div className="toast-stack" role="status">
+        <div
+          className="toast-stack"
+          role="status"
+          onMouseEnter={holdToast}
+          onMouseLeave={resumeToast}
+          onFocusCapture={holdToast}
+          onBlurCapture={() => {
+            toastTimer.current = setTimeout(() => setToast(""), 3300);
+          }}
+        >
           <Check />
           {toast}
+          {toast === t("added") && (
+            <button onClick={() => open("cart")}>
+              {t("viewBag")}
+              <ArrowRight size={13} />
+            </button>
+          )}
         </div>
       )}
     </div>
