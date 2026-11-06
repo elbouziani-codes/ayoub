@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { openDatabase } from './helpers/database.mjs';
-import { hashPassword, verifyPassword, credentialVersion, sessionToken } from '../lib/server/admin-credentials.ts';
+import { hashLocalAdminPassword, hashPassword, verifyPassword, credentialVersion, sessionToken } from '../lib/server/admin-credentials.ts';
 import { createSession, findSession, revokeSession, SESSION_SECONDS } from '../lib/server/admin-session-store.ts';
 import { consumeRateLimit, rateLimitKey } from '../lib/server/rate-limit-store.ts';
 import { handleError, HttpError } from '../lib/server/http.ts';
@@ -64,6 +64,14 @@ if (!isMainThread) {
     assert.equal(await verifyPassword(input, encoded), true);
     assert.equal(await verifyPassword(`${input} `, encoded), false);
     assert.equal(await verifyPassword('wrong-password', encoded), false);
+  });
+
+  test('local plaintext bootstrap derives a stable hash without storing it in .env', async () => {
+    const first = await hashLocalAdminPassword(email, password);
+    assert.equal(await hashLocalAdminPassword(email, password), first);
+    assert.notEqual(await hashLocalAdminPassword('other@example.invalid', password), first);
+    assert.notEqual(await hashLocalAdminPassword(email, 'different-password'), first);
+    assert.equal(await verifyPassword(password, first), true);
   });
 
   test('password hashes reject malformed encodings, unsupported work factors and oversized inputs', async () => {

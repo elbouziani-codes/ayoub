@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { cookies } from "next/headers";
 import { z } from "zod";
-import { validPasswordHash, verifyPassword } from "./admin-credentials";
+import { hashLocalAdminPassword, validPasswordHash, verifyPassword } from "./admin-credentials";
 import { createSession, findSession, revokeSession, SESSION_SECONDS } from "./admin-session-store";
 import { getDatabase } from "./db";
 import { readAccount, type AdminAccount } from "./admin-account-store";
@@ -15,11 +15,13 @@ const loginInput = z.object({
   password: z.string().min(1).max(256),
 }).strict();
 
-export function passwordAdminConfig(): { configured: boolean; email: string; hash: string; recoveryEmail: string; available: boolean } {
+export async function passwordAdminConfig(): Promise<{ configured: boolean; email: string; hash: string; recoveryEmail: string; available: boolean }> {
   const email = (env.ADMIN_LOGIN_EMAIL ?? "").trim().toLowerCase();
-  const hash = env.ADMIN_PASSWORD_HASH ?? "";
+  const password = env.ADMIN_PASSWORD ?? "";
+  const configuredHash = env.ADMIN_PASSWORD_HASH ?? "";
+  const hash = configuredHash || (password.length >= 12 && password.length <= 256 ? await hashLocalAdminPassword(email, password) : "");
   const recoveryEmail = (env.ADMIN_RECOVERY_EMAIL ?? email).trim().toLowerCase();
-  const configured = Boolean(email || hash || env.ADMIN_RECOVERY_EMAIL);
+  const configured = Boolean(email || password || configuredHash || env.ADMIN_RECOVERY_EMAIL);
   return { configured, email, hash, recoveryEmail, available: z.string().email().max(254).safeParse(email).success && z.string().email().max(254).safeParse(recoveryEmail).success && validPasswordHash(hash) };
 }
 
@@ -29,13 +31,13 @@ async function currentToken(): Promise<string | undefined> {
 }
 
 export async function getPasswordAccount(): Promise<AdminAccount> {
-  const config = passwordAdminConfig();
+  const config = await passwordAdminConfig();
   if (!config.available) throw new HttpError(503, "Administrator sign-in is not available. Contact the store owner.", "login_unavailable");
   return readAccount(getDatabase(), config);
 }
 
 export async function requirePasswordAccount(): Promise<AdminAccount> {
-  const config = passwordAdminConfig();
+  const config = await passwordAdminConfig();
   if (!config.configured) throw new HttpError(403, "Password account settings are unavailable.", "password_login_required");
   const account = await getPasswordAccount();
   const token = await currentToken();
@@ -44,7 +46,7 @@ export async function requirePasswordAccount(): Promise<AdminAccount> {
 }
 
 export async function passwordAdminSession(): Promise<AdminSession | null> {
-  const config = passwordAdminConfig();
+  const config = await passwordAdminConfig();
   if (!config.configured) return null;
   const anonymous: AdminSession = { authenticated: false, isAdmin: false, user: null, passwordLoginAvailable: config.available };
   if (!config.available) return anonymous;

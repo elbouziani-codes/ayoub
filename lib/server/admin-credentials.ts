@@ -20,6 +20,12 @@ export async function hashPassword(password: string, saltHex?: string): Promise<
   return `pbkdf2-sha256$${PASSWORD_ITERATIONS}$${salt}$${hex(derived)}`;
 }
 
+/** Keep local plaintext bootstrap credentials stable across Worker restarts. */
+export async function hashLocalAdminPassword(email: string, password: string): Promise<string> {
+  const salt = (await digest(`ayoub-shop-admin-bootstrap-v1\n${email}`)).slice(0, 32);
+  return hashPassword(password, salt);
+}
+
 export async function verifyPassword(password: string, encoded: string): Promise<boolean> {
   if (!validPasswordHash(encoded) || password.length > 256) return false;
   const derived = await hashPassword(password, encoded.split("$")[2]);
