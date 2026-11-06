@@ -6,7 +6,7 @@ import { ArrowUpRight, Eye, EyeOff, KeyRound, LoaderCircle, RefreshCw, Save, Shi
 import "./account.css";
 
 type Language = "en" | "fr" | "ar";
-type Account = { email: string; recoveryMethod: "chatgpt"; recoveryEmail: string };
+type Account = { email: string; recoveryMethod: "chatgpt" | "hosting"; recoveryEmail: string };
 type ErrorKey = "loadError" | "saveError" | "invalidPassword" | "passwordLength" | "passwordMismatch" | "noChanges" | "rateLimit" | "accountChanged";
 type ApiError = { code?: string; retryAfter?: unknown; ok?: boolean };
 
@@ -20,6 +20,7 @@ const words = {
     sessionNote: "Saving signs you out on all devices. Sign in again with your updated details.",
     recoveryTitle: "Keep your way back in.", recoveryDescription: "Forgot your password? Recover access using this verified ChatGPT account.",
     recoveryNote: "Changing your administrator email keeps this recovery account the same.", recovery: "Reset a forgotten password",
+    hostingRecovery: "Keep your password in a password manager. If you lose access, contact the owner of the hosting account to restore administrator access.",
     passwordRequired: "Sign in with your administrator password to change your account details. If you have forgotten it, recover access with your verified ChatGPT account.",
     loadError: "We couldn’t load your account. Please try again.", saveError: "We couldn’t save your changes. Please try again.",
     invalidPassword: "Your current password is incorrect. Please try again.", passwordLength: "Your new password must contain 12–256 characters.",
@@ -36,6 +37,7 @@ const words = {
     sessionNote: "L’enregistrement vous déconnecte de tous les appareils. Reconnectez-vous avec vos nouvelles informations.",
     recoveryTitle: "Gardez un accès à votre compte.", recoveryDescription: "Mot de passe oublié ? Récupérez l’accès avec ce compte ChatGPT vérifié.",
     recoveryNote: "La modification de votre e-mail administrateur ne change pas ce compte de récupération.", recovery: "Réinitialiser un mot de passe oublié",
+    hostingRecovery: "Conservez votre mot de passe dans un gestionnaire de mots de passe. En cas de perte d’accès, contactez le propriétaire du compte d’hébergement pour rétablir l’accès administrateur.",
     passwordRequired: "Connectez-vous avec votre mot de passe administrateur pour modifier votre compte. Si vous l’avez oublié, récupérez l’accès avec votre compte ChatGPT vérifié.",
     loadError: "Impossible de charger votre compte. Veuillez réessayer.", saveError: "Impossible d’enregistrer vos modifications. Veuillez réessayer.",
     invalidPassword: "Votre mot de passe actuel est incorrect. Veuillez réessayer.", passwordLength: "Votre nouveau mot de passe doit contenir 12 à 256 caractères.",
@@ -52,6 +54,7 @@ const words = {
     sessionNote: "سيتم تسجيل خروجك من جميع الأجهزة بعد الحفظ. سجّل الدخول مجدداً ببياناتك الجديدة.",
     recoveryTitle: "احتفظ بطريقة لاستعادة حسابك.", recoveryDescription: "نسيت كلمة المرور؟ استعد الوصول باستخدام حساب ChatGPT الموثق أدناه.",
     recoveryNote: "تغيير بريد المسؤول لا يغير حساب الاسترداد هذا.", recovery: "إعادة تعيين كلمة مرور منسية",
+    hostingRecovery: "احتفظ بكلمة المرور في مدير كلمات المرور. إذا فقدت الوصول، تواصل مع مالك حساب الاستضافة لاستعادة صلاحية المسؤول.",
     passwordRequired: "سجّل الدخول بكلمة مرور المسؤول لتغيير بيانات حسابك. إذا نسيتها، استعد الوصول باستخدام حساب ChatGPT الموثق.",
     loadError: "تعذر تحميل حسابك. حاول مجدداً.", saveError: "تعذر حفظ التغييرات. حاول مجدداً.",
     invalidPassword: "كلمة المرور الحالية غير صحيحة. حاول مجدداً.", passwordLength: "يجب أن تتكون كلمة المرور الجديدة من 12 إلى 256 حرفاً.",
@@ -172,6 +175,6 @@ export default function AdminAccountSettings({ lang, onSessionExpired, onSaved }
         <div className="adm-account-save"><p><ShieldCheck size={16} />{t.sessionNote}</p><button type="submit" className="adm-button adm-button-primary" disabled={submitting || retrySeconds > 0 || error === "accountChanged"}>{submitting ? <LoaderCircle size={16} className="adm-spin" /> : <Save size={16} />}{submitting ? t.saving : t.save}</button></div>
       </form>
     </section>
-    <aside className="adm-panel adm-account-recovery" aria-labelledby="admin-recovery-title"><span className="adm-account-recovery-icon"><ShieldCheck size={25} strokeWidth={1.5} /></span><h2 id="admin-recovery-title">{t.recoveryTitle}</h2><p>{t.recoveryDescription}</p><strong dir="ltr">{account.recoveryEmail}</strong><p>{t.recoveryNote}</p><Link href="/admin/reset-password" className="adm-text-button">{t.recovery}<ArrowUpRight size={14} /></Link></aside>
+    <aside className="adm-panel adm-account-recovery" aria-labelledby="admin-recovery-title"><span className="adm-account-recovery-icon"><ShieldCheck size={25} strokeWidth={1.5} /></span><h2 id="admin-recovery-title">{t.recoveryTitle}</h2>{account.recoveryMethod === "hosting" ? <p>{t.hostingRecovery}</p> : <><p>{t.recoveryDescription}</p><strong dir="ltr">{account.recoveryEmail}</strong><p>{t.recoveryNote}</p><Link href="/admin/reset-password" className="adm-text-button">{t.recovery}<ArrowUpRight size={14} /></Link></>}</aside>
   </div>;
 }

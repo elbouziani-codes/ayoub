@@ -6,7 +6,7 @@ import { rateLimit } from "@/lib/server/rate-limit";
 export async function GET() {
   try {
     const account = await requirePasswordAccount();
-    return json({ email: account.email, recoveryMethod: "chatgpt", recoveryEmail: account.recoveryEmail });
+    return json({ email: account.email, recoveryMethod: process.env.AYOUB_RUNTIME === "netlify" ? "hosting" : "chatgpt", recoveryEmail: account.recoveryEmail });
   } catch (error) { return handleError(error); }
 }
 

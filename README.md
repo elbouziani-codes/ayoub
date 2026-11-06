@@ -2,6 +2,8 @@
 
 A working multilingual watch store for Morocco. The application includes a responsive dark storefront, searchable and filterable catalog, product pages, saved watches, a persistent shopping bag, cash-on-delivery checkout, private order tracking, and protected administration.
 
+For Netlify, use the native Next.js build and PostgreSQL/Blobs backend described in [NETLIFY.md](NETLIFY.md). The configuration in `netlify.toml` selects this build automatically; the commands below retain the Sites/Cloudflare development workflow.
+
 ## Run locally
 
 Requires Node.js 24 (the test suite uses built-in TypeScript stripping and SQLite), npm, and a local port.

@@ -3,7 +3,10 @@ import { getBucket } from "@/lib/server/db";
 import { handleError, HttpError, json, requireSameOrigin } from "@/lib/server/http";
 import { rateLimit } from "@/lib/server/rate-limit";
 
-const maxBytes = 5 * 1024 * 1024;
+// Stay below Netlify's binary request limit, including multipart/base64 overhead.
+const maxMiB = process.env.AYOUB_RUNTIME === "netlify" ? 4 : 5;
+const maxBytes = maxMiB * 1024 * 1024;
+const sizeMessage = `Images must be ${maxMiB} MiB or smaller`;
 function imageKind(bytes: Uint8Array): { extension: string; contentType: string } | null {
   if (bytes.length >= 8 && [137, 80, 78, 71, 13, 10, 26, 10].every((byte, i) => bytes[i] === byte)) return { extension: "png", contentType: "image/png" };
   if (bytes.length >= 3 && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) return { extension: "jpg", contentType: "image/jpeg" };
@@ -18,7 +21,7 @@ export async function POST(request: Request) {
     const contentType = request.headers.get("Content-Type") ?? "";
     if (!contentType.toLowerCase().startsWith("multipart/form-data;")) throw new HttpError(415, "Upload an image using a file form", "invalid_content_type");
     const maxBody = maxBytes + 65536;
-    if (Number(request.headers.get("Content-Length") ?? 0) > maxBody) throw new HttpError(413, "Images must be 5 MB or smaller", "file_too_large");
+    if (Number(request.headers.get("Content-Length") ?? 0) > maxBody) throw new HttpError(413, sizeMessage, "file_too_large");
     const reader = request.body?.getReader();
     if (!reader) throw new HttpError(400, "Choose an image", "missing_file");
     let size = 0;
@@ -27,7 +30,7 @@ export async function POST(request: Request) {
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > maxBody) { await reader.cancel(); throw new HttpError(413, "Images must be 5 MB or smaller", "file_too_large"); }
+      if (size > maxBody) { await reader.cancel(); throw new HttpError(413, sizeMessage, "file_too_large"); }
       chunks.push(value);
     }
     const payload = new Uint8Array(size);
@@ -38,7 +41,7 @@ export async function POST(request: Request) {
     catch { throw new HttpError(400, "Image upload was not valid", "invalid_upload"); }
     const file = form.get("file");
     if (!(file instanceof File) || !file.size) throw new HttpError(400, "Choose an image", "missing_file");
-    if (file.size > maxBytes) throw new HttpError(413, "Images must be 5 MB or smaller", "file_too_large");
+    if (file.size > maxBytes) throw new HttpError(413, sizeMessage, "file_too_large");
     const bytes = new Uint8Array(await file.arrayBuffer());
     const kind = imageKind(bytes);
     if (!kind || file.type !== kind.contentType) throw new HttpError(415, "Choose a PNG, JPEG or WebP image", "invalid_image");

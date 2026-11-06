@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build:netlify"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Netlify installs and updates its OpenNext adapter automatically. The adapter
+# deploys Next.js pages, route handlers and server rendering as Netlify Functions.

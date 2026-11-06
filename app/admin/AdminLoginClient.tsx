@@ -12,6 +12,7 @@ type Session = {
   user: { email?: string; displayName?: string } | null;
   authMethod?: "password" | "chatgpt";
   passwordLoginAvailable?: boolean;
+  chatGPTLoginAvailable?: boolean;
 };
 
 const words = {
@@ -23,7 +24,7 @@ const words = {
     protected: "Protected access · Authorized team members only", backStore: "Back to the store", loading: "Checking your access…",
     sessionError: "We couldn’t verify your access.", retry: "Try again", invalidCredentials: "The email or password is incorrect.",
     loginError: "We couldn’t sign you in. Please try again shortly.", rateLimit: "Too many sign-in attempts. Please wait before trying again.",
-    retryIn: "Try again in", seconds: "seconds", unavailable: "Password sign-in is currently unavailable. Use an authorized ChatGPT account or contact the store administrator.",
+    retryIn: "Try again in", seconds: "seconds", unavailable: "Password sign-in is currently unavailable. Contact the store administrator.",
     denied: "This account does not have administrator access.", signedInAs: "Signed in as", signOut: "Sign out of ChatGPT", opening: "Opening your workspace…",
     accountUpdated: "Your account has been updated. Sign in with your new details.", passwordReset: "Your password has been reset. Sign in with your new password.",
   },
@@ -35,7 +36,7 @@ const words = {
     protected: "Accès protégé · Équipe autorisée uniquement", backStore: "Retour à la boutique", loading: "Vérification de votre accès…",
     sessionError: "Impossible de vérifier votre accès.", retry: "Réessayer", invalidCredentials: "L’e-mail ou le mot de passe est incorrect.",
     loginError: "Connexion impossible. Veuillez réessayer dans un instant.", rateLimit: "Trop de tentatives de connexion. Patientez avant de réessayer.",
-    retryIn: "Réessayez dans", seconds: "secondes", unavailable: "La connexion par mot de passe est indisponible. Utilisez un compte ChatGPT autorisé ou contactez l’administrateur de la boutique.",
+    retryIn: "Réessayez dans", seconds: "secondes", unavailable: "La connexion par mot de passe est indisponible. Contactez l’administrateur de la boutique.",
     denied: "Ce compte n’a pas accès à l’administration.", signedInAs: "Connecté en tant que", signOut: "Se déconnecter de ChatGPT", opening: "Ouverture de votre espace…",
     accountUpdated: "Votre compte a été mis à jour. Connectez-vous avec vos nouveaux identifiants.", passwordReset: "Votre mot de passe a été réinitialisé. Connectez-vous avec le nouveau mot de passe.",
   },
@@ -47,7 +48,7 @@ const words = {
     protected: "وصول محمي · للمسؤولين المصرح لهم فقط", backStore: "العودة إلى المتجر", loading: "جارٍ التحقق من صلاحية الدخول…",
     sessionError: "تعذر التحقق من صلاحية الدخول.", retry: "إعادة المحاولة", invalidCredentials: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
     loginError: "تعذر تسجيل الدخول. حاول مجدداً بعد قليل.", rateLimit: "محاولات تسجيل الدخول كثيرة. يُرجى الانتظار قبل إعادة المحاولة.",
-    retryIn: "يمكنك المحاولة بعد", seconds: "ثانية", unavailable: "تسجيل الدخول بكلمة المرور غير متاح حالياً. استخدم حساب ChatGPT مصرحاً له أو تواصل مع مسؤول المتجر.",
+    retryIn: "يمكنك المحاولة بعد", seconds: "ثانية", unavailable: "تسجيل الدخول بكلمة المرور غير متاح حالياً. تواصل مع مسؤول المتجر.",
     denied: "هذا الحساب غير مصرح له بإدارة المتجر.", signedInAs: "تم تسجيل الدخول باسم", signOut: "تسجيل الخروج من ChatGPT", opening: "جارٍ فتح مساحة متجرك…",
     accountUpdated: "تم تحديث حسابك. سجّل الدخول بمعلوماتك الجديدة.", passwordReset: "تمت إعادة تعيين كلمة المرور. سجّل الدخول بكلمة المرور الجديدة.",
   },
@@ -173,7 +174,7 @@ export default function AdminLoginClient({ initialLanguage = "fr" }: { initialLa
             <button type="submit" className="adm-button adm-button-primary adm-login-submit" disabled={submitting || retrySeconds > 0}>{submitting ? <LoaderCircle size={17} className="adm-spin" /> : <LockKeyhole size={17} />}{submitting ? t.signingIn : t.signIn}</button>
             {retrySeconds > 0 && <p className="adm-login-countdown" role="status" aria-live="off">{t.retryIn} {new Intl.NumberFormat(lang).format(retrySeconds)} {t.seconds}</p>}
           </form> : <div className="adm-login-notice" role="status"><p>{t.unavailable}</p></div>}
-          {!session?.passwordLoginAvailable && <div className="adm-login-alternative"><span>{t.alternative}</span><a href="/signin-with-chatgpt?return_to=%2Fadmin" target="_top" className="adm-button adm-button-secondary"><LockKeyhole size={16} />{t.chatGPT}<ArrowUpRight size={16} /></a></div>}
+          {!session?.passwordLoginAvailable && (session?.chatGPTLoginAvailable === false ? <div className="adm-login-notice" role="status"><p>{t.unavailable}</p></div> : <div className="adm-login-alternative"><span>{t.alternative}</span><a href="/signin-with-chatgpt?return_to=%2Fadmin" target="_top" className="adm-button adm-button-secondary"><LockKeyhole size={16} />{t.chatGPT}<ArrowUpRight size={16} /></a></div>)}
           <span className="adm-auth-note"><ShieldCheck size={13} />{t.protected}</span>
         </>}
       </div>

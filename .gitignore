@@ -13,6 +13,7 @@
 /dist/
 /.next/
 /.vinext/
+/.netlify/
 /out/
 next-env.d.ts
 *.tsbuildinfo

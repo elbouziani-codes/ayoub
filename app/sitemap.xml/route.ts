@@ -1,6 +1,8 @@
 import { listProducts } from "@/lib/server/catalog";
 import { SITE_URL } from "@/lib/shop-config";
 
+export const dynamic = "force-dynamic";
+
 const escapeXml = (value: string) => value.replace(/[<>&'\"]/g, (character) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '\"': "&quot;" })[character]!);
 
 export async function GET() {

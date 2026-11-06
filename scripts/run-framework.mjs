@@ -4,6 +4,15 @@ import { readExecutionProfile } from "./execution-profile.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 if (!["dev", "build"].includes(command)) throw new Error("Expected dev or build.");
+
+if (command === "build" && process.env.NETLIFY === "true") {
+  const result = spawnSync(process.execPath, [
+    fileURLToPath(new URL("./build-netlify.mjs", import.meta.url)), ...args,
+  ], { stdio: "inherit" });
+  if (result.error) throw result.error;
+  process.exit(result.status ?? 1);
+}
+
 const managedLinux = readExecutionProfile() === "managed-linux";
 
 if (managedLinux && command === "build") {

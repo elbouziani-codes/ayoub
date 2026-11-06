@@ -7,6 +7,7 @@ export async function POST(request: Request) {
     requireSameOrigin(request);
     await rateLimit(request, "admin-recovery-ip", 5, 15 * 60);
     const session = await adminRecoverySession();
+    if (!session.available) throw new HttpError(503, "Contact the hosting account owner to restore administrator access.", "recovery_unavailable");
     if (!session.authenticated) throw new HttpError(401, "Sign in with the store owner's ChatGPT account.", "unauthenticated");
     if (!session.canReset) throw new HttpError(403, "This account cannot recover administrator access.", "recovery_forbidden");
     await rateLimit(request, "admin-recovery-owner", 5, 15 * 60, session.user!.email.toLowerCase());

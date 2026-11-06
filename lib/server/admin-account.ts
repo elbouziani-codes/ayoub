@@ -29,9 +29,10 @@ export async function changeAdminAccount(input: z.infer<typeof accountUpdateInpu
 
 /** Recovery is bound to the original verified Sites identity, never to an editable login address. */
 export async function adminRecoverySession() {
+  if (process.env.AYOUB_RUNTIME === "netlify") return { authenticated: false, canReset: false, available: false, user: null };
   const user = await getChatGPTUser();
   const config = await passwordAdminConfig();
-  return { authenticated: Boolean(user), canReset: Boolean(config.available && user && user.email.toLowerCase() === config.recoveryEmail),
+  return { authenticated: Boolean(user), canReset: Boolean(config.available && user && user.email.toLowerCase() === config.recoveryEmail), available: true,
     user: user ? { email: user.email, displayName: user.displayName } : null };
 }
 

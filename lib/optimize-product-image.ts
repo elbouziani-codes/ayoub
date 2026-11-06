@@ -1,5 +1,6 @@
 /** Browser-only preparation; the upload endpoint still validates every file. */
-export const IMAGE_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
+export const IMAGE_UPLOAD_MAX_MIB = process.env.AYOUB_RUNTIME === "netlify" ? 4 : 5;
+export const IMAGE_UPLOAD_MAX_BYTES = IMAGE_UPLOAD_MAX_MIB * 1024 * 1024;
 const MAX_EDGE = 1600;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 

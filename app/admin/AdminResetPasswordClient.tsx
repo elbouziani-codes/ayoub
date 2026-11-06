@@ -8,6 +8,7 @@ type Language = "en" | "fr" | "ar";
 type RecoverySession = {
   authenticated: boolean;
   canReset: boolean;
+  available?: boolean;
   user: { email?: string; displayName?: string } | null;
 };
 type RecoveryError = "invalidPassword" | "mismatch" | "resetError" | "rateLimit" | "unavailable";
@@ -26,6 +27,7 @@ const words = {
     mismatch: "The passwords do not match.", resetError: "We couldn’t reset your password. Please try again shortly.",
     rateLimit: "Too many reset attempts. Please wait before trying again.", retryIn: "Try again in", seconds: "seconds",
     unavailable: "Password recovery is currently unavailable. Please try again later.",
+    hostingRecovery: "Contact the owner of the hosting account to restore administrator access.",
     successTitle: "Password reset.", success: "Your new password is ready. All administrator sessions have been signed out.",
     signIn: "Sign in with your new password", backLogin: "Back to administrator sign in", backStore: "Back to the store",
     protected: "Protected recovery · Store owner verification required",
@@ -43,6 +45,7 @@ const words = {
     mismatch: "Les mots de passe ne correspondent pas.", resetError: "Impossible de réinitialiser le mot de passe. Veuillez réessayer dans un instant.",
     rateLimit: "Trop de tentatives de réinitialisation. Patientez avant de réessayer.", retryIn: "Réessayez dans", seconds: "secondes",
     unavailable: "La récupération du mot de passe est indisponible. Veuillez réessayer plus tard.",
+    hostingRecovery: "Contactez le propriétaire du compte d’hébergement pour rétablir l’accès administrateur.",
     successTitle: "Mot de passe réinitialisé.", success: "Votre nouveau mot de passe est prêt. Toutes les sessions administrateur ont été déconnectées.",
     signIn: "Se connecter avec le nouveau mot de passe", backLogin: "Retour à la connexion administrateur", backStore: "Retour à la boutique",
     protected: "Récupération protégée · Vérification du propriétaire requise",
@@ -60,6 +63,7 @@ const words = {
     mismatch: "كلمتا المرور غير متطابقتين.", resetError: "تعذرت إعادة تعيين كلمة المرور. حاول مجدداً بعد قليل.",
     rateLimit: "محاولات إعادة التعيين كثيرة. يُرجى الانتظار قبل المحاولة مجدداً.", retryIn: "يمكنك المحاولة بعد", seconds: "ثانية",
     unavailable: "استعادة كلمة المرور غير متاحة حالياً. حاول مجدداً لاحقاً.",
+    hostingRecovery: "تواصل مع مالك حساب الاستضافة لاستعادة صلاحية المسؤول.",
     successTitle: "تمت إعادة تعيين كلمة المرور.", success: "كلمة المرور الجديدة جاهزة. تم إنهاء جميع جلسات المسؤول.",
     signIn: "الدخول بكلمة المرور الجديدة", backLogin: "العودة إلى تسجيل دخول المسؤول", backStore: "العودة إلى المتجر",
     protected: "استعادة محمية · يلزم التحقق من هوية مالك المتجر",
@@ -176,7 +180,7 @@ export default function AdminResetPasswordClient({ initialLanguage = "fr" }: { i
       <div className="adm-auth-content">
         <span className="adm-eyebrow"><ShieldCheck size={14} />{t.security}</span>
         <h1>{t.title}</h1><p>{t.description}</p>
-        {sessionLoading ? <div className="adm-login-loading" role="status"><LoaderCircle size={20} className="adm-spin" /><span>{t.loading}</span></div> : sessionError ? <div className="adm-login-notice" role="alert"><p>{t.sessionError}</p><button type="button" className="adm-button adm-button-secondary" onClick={() => { setSessionLoading(true); setSessionError(false); void checkSession(); }}><RefreshCw size={15} />{t.retry}</button></div> : complete ? <div className="adm-recovery-success" role="status"><CheckCircle2 size={27} /><h2>{t.successTitle}</h2><p>{t.success}</p><Link href="/admin/login?reset=1" className="adm-button adm-button-primary">{t.signIn}<ArrowUpRight size={16} /></Link></div> : !session?.authenticated ? <div className="adm-recovery-intro"><p>{t.verify}</p><a href="/signin-with-chatgpt?return_to=%2Fadmin%2Freset-password" target="_top" className="adm-button adm-button-secondary"><ShieldCheck size={16} />{t.chatGPT}<ArrowUpRight size={16} /></a></div> : !session.canReset ? <div className="adm-login-notice" role="status"><p>{t.denied}</p><a href="/signout-with-chatgpt?return_to=%2Fadmin%2Freset-password" target="_top" className="adm-text-button"><LogOut size={14} />{t.switchAccount}</a></div> : <form className="adm-login-form" onSubmit={resetPassword} aria-busy={submitting}>
+        {sessionLoading ? <div className="adm-login-loading" role="status"><LoaderCircle size={20} className="adm-spin" /><span>{t.loading}</span></div> : sessionError ? <div className="adm-login-notice" role="alert"><p>{t.sessionError}</p><button type="button" className="adm-button adm-button-secondary" onClick={() => { setSessionLoading(true); setSessionError(false); void checkSession(); }}><RefreshCw size={15} />{t.retry}</button></div> : complete ? <div className="adm-recovery-success" role="status"><CheckCircle2 size={27} /><h2>{t.successTitle}</h2><p>{t.success}</p><Link href="/admin/login?reset=1" className="adm-button adm-button-primary">{t.signIn}<ArrowUpRight size={16} /></Link></div> : session?.available === false ? <div className="adm-login-notice" role="status"><p>{t.hostingRecovery}</p></div> : !session?.authenticated ? <div className="adm-recovery-intro"><p>{t.verify}</p><a href="/signin-with-chatgpt?return_to=%2Fadmin%2Freset-password" target="_top" className="adm-button adm-button-secondary"><ShieldCheck size={16} />{t.chatGPT}<ArrowUpRight size={16} /></a></div> : !session.canReset ? <div className="adm-login-notice" role="status"><p>{t.denied}</p><a href="/signout-with-chatgpt?return_to=%2Fadmin%2Freset-password" target="_top" className="adm-text-button"><LogOut size={14} />{t.switchAccount}</a></div> : <form className="adm-login-form" onSubmit={resetPassword} aria-busy={submitting}>
           {session.user && <div className="adm-recovery-account"><span>{t.signedInAs}</span><strong dir={session.user.email ? "ltr" : undefined}>{session.user.email || session.user.displayName}</strong></div>}
           <div className="adm-login-field"><label htmlFor="admin-new-password">{t.newPassword}</label><div className="adm-login-password"><input id="admin-new-password" name="newPassword" type={showPassword ? "text" : "password"} autoComplete="new-password" autoCapitalize="none" spellCheck={false} dir="ltr" minLength={12} maxLength={256} required value={newPassword} onChange={event => setNewPassword(event.target.value)} disabled={submitting} aria-invalid={error === "invalidPassword" || error === "mismatch"} aria-describedby={error ? "admin-reset-password-help admin-reset-error" : "admin-reset-password-help"} /><button type="button" onClick={() => setShowPassword(current => !current)} aria-label={showPassword ? t.hidePassword : t.showPassword} aria-pressed={showPassword} disabled={submitting}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div><p id="admin-reset-password-help" className="adm-recovery-help">{t.passwordHelp}</p></div>
           <div className="adm-login-field"><label htmlFor="admin-confirm-password">{t.confirmPassword}</label><div className="adm-login-password"><input id="admin-confirm-password" name="confirmPassword" type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" autoCapitalize="none" spellCheck={false} dir="ltr" minLength={12} maxLength={256} required value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} disabled={submitting} aria-invalid={error === "mismatch"} aria-describedby={error ? "admin-reset-error" : undefined} /><button type="button" onClick={() => setShowConfirmPassword(current => !current)} aria-label={showConfirmPassword ? t.hidePassword : t.showPassword} aria-pressed={showConfirmPassword} disabled={submitting}>{showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
