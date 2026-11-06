@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 import type { Metadata } from "next";
-import { dictionaries, productDescription, productName, type Locale } from "./i18n";
+import { localizedDictionary, productDescription, productDetail, productName, type ContentOverrides, type Locale } from "./i18n";
 import { SHOP_COUNTRY, SHOP_CURRENCY, SITE_NAME, SITE_URL, SUPPORT_URL, SUPPORT_WHATSAPP } from "./shop-config";
 import type { Product } from "./types";
 
@@ -29,10 +29,10 @@ export const SEO_COPY = {
   },
 } as const;
 
-/** Bots without a language cookie consistently receive the English URL content. */
+/** New visitors receive French; an explicit saved language still takes priority. */
 export const getRequestLocale = cache(async (): Promise<Locale> => {
   const saved = (await cookies()).get("ayoub-language")?.value;
-  return saved === "fr" || saved === "ar" ? saved : "en";
+  return saved === "en" || saved === "ar" ? saved : "fr";
 });
 
 export const absoluteUrl = (path = "/") => new URL(path, SITE_URL).href;
@@ -103,7 +103,8 @@ function organization() {
   };
 }
 
-export function homeStructuredData(products: Product[], locale: Locale) {
+export function homeStructuredData(products: Product[], locale: Locale, overrides: ContentOverrides = {}) {
+  const copy = localizedDictionary(locale, overrides);
   // Match the initial, featured-first storefront selection rather than hidden items.
   const visibleProducts = [...products].sort((a, b) => Number(b.featured) - Number(a.featured)).slice(0, 4);
   return {
@@ -122,8 +123,8 @@ export function homeStructuredData(products: Product[], locale: Locale) {
         "@type": "CollectionPage",
         "@id": absoluteUrl("/#webpage"),
         url: absoluteUrl(),
-        name: SEO_COPY[locale].collection,
-        description: SEO_COPY[locale].description,
+        name: copy.seoCollection,
+        description: copy.seoDescription,
         inLanguage: `${locale}-MA`,
         isPartOf: { "@id": absoluteUrl("/#website") },
         ...(visibleProducts.length ? {
@@ -143,7 +144,8 @@ export function homeStructuredData(products: Product[], locale: Locale) {
   };
 }
 
-export function productStructuredData(product: Product, locale: Locale) {
+export function productStructuredData(product: Product, locale: Locale, overrides: ContentOverrides = {}) {
+  const copy = localizedDictionary(locale, overrides);
   const url = productUrl(product.slug);
   return {
     "@context": "https://schema.org",
@@ -158,8 +160,8 @@ export function productStructuredData(product: Product, locale: Locale) {
         sku: product.id,
         brand: { "@type": "Brand", name: SITE_NAME },
         category: product.category,
-        color: product.color,
-        material: product.material,
+        color: productDetail(product, locale, "color"),
+        material: productDetail(product, locale, "material"),
         offers: {
           "@type": "Offer",
           url,
@@ -169,16 +171,16 @@ export function productStructuredData(product: Product, locale: Locale) {
           seller: { "@type": "Organization", "@id": absoluteUrl("/#organization"), name: SITE_NAME, url: absoluteUrl() },
         },
         additionalProperty: [
-          { "@type": "PropertyValue", name: "Movement", value: product.movement },
-          { "@type": "PropertyValue", name: "Case size", value: product.caseSize },
-          { "@type": "PropertyValue", name: "Water resistance", value: product.waterResistance },
+          { "@type": "PropertyValue", name: "Movement", value: productDetail(product, locale, "movement") },
+          { "@type": "PropertyValue", name: "Case size", value: productDetail(product, locale, "caseSize") },
+          { "@type": "PropertyValue", name: "Water resistance", value: productDetail(product, locale, "waterResistance") },
         ],
       },
       {
         "@type": "BreadcrumbList",
         "@id": `${url}#breadcrumb`,
         itemListElement: [
-          { "@type": "ListItem", position: 1, name: dictionaries[locale].home, item: absoluteUrl() },
+          { "@type": "ListItem", position: 1, name: copy.home, item: absoluteUrl() },
           { "@type": "ListItem", position: 2, name: productName(product, locale), item: url },
         ],
       },

@@ -1,7 +1,11 @@
 export type Category = "Classic" | "Sport" | "Minimal" | "Limited";
+export type ProductDetails = { subtitle: string; badge: string; color: string; movement: string; caseSize: string; waterResistance: string; material: string };
+export type LocalizedProductDetails = { fr: ProductDetails; ar: ProductDetails };
+export type EditorialAsset = { slot: "editorialImage"; image: string; en: string; fr: string; ar: string };
 export type Product = {
   id: string; slug: string; name: string; subtitle: string; description: string;
   nameFr?: string; nameAr?: string; descriptionFr?: string; descriptionAr?: string;
+  localizedDetails?: LocalizedProductDetails;
   price: number; compareAt?: number; category: Category; color: string;
   movement: string; caseSize: string; waterResistance: string; material: string;
   stock: number; images: string[]; featured: boolean; badge?: string;

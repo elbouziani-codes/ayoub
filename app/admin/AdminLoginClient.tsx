@@ -61,7 +61,7 @@ function retryDelay(response: Response, data: { retryAfter?: unknown }): number 
   return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : 60;
 }
 
-export default function AdminLoginClient({ initialLanguage = "en" }: { initialLanguage?: Language }) {
+export default function AdminLoginClient({ initialLanguage = "fr" }: { initialLanguage?: Language }) {
   const router = useRouter();
   const [lang, setLang] = useState<Language>(initialLanguage);
   const [session, setSession] = useState<Session | null>(null);

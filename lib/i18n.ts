@@ -1,4 +1,4 @@
-import type { Product } from "./types";
+import type { Product, ProductDetails } from "./types";
 export type Locale = "en" | "fr" | "ar";
 const en = {
   freeTop: "Free delivery on orders over 1,000 MAD",
@@ -208,6 +208,10 @@ const en = {
     "All prices are in Moroccan dirhams (MAD). Products and stock are subject to availability. The final price, delivery fee, and quantity appear before you confirm your order. Payment is cash on delivery. Please provide accurate contact details and a valid Moroccan address. Order status changes are recorded by shop administrators. Contact the shop before dispatch for cancellation or changes. Product specifications describe our curated collection; images are illustrative studio renders. Statutory consumer rights remain applicable.",
   storyPolicy:
     "Ayoub Shop brings a fresh perspective to everyday watches. Our collection pairs contemporary silhouettes with considered materials and approachable pricing. From understated classics to expressive chronographs, each piece is selected to make your everyday feel a little more yours.",
+  seoTitle: "Ayoub Shop | Premium Watches & Accessories",
+  seoDescription: "Discover modern watches at Ayoub Shop. Browse the collection, shop in Moroccan dirhams, and pay cash on delivery across Morocco.",
+  seoCollection: "Premium watches in Morocco",
+  seoNotFound: "Watch not found",
 };
 type Dictionary = Record<keyof typeof en, string>;
 const fr: Dictionary = {
@@ -419,6 +423,10 @@ const fr: Dictionary = {
     "Les prix sont en dirhams marocains (MAD). Les produits dépendent des stocks disponibles. Prix, livraison et quantités sont affichés avant confirmation. Le paiement se fait en espèces à la livraison. Fournissez des coordonnées exactes et une adresse au Maroc. Contactez la boutique avant expédition pour toute modification. Les images sont des rendus studio illustratifs. Vos droits légaux restent applicables.",
   storyPolicy:
     "Ayoub Shop propose un regard neuf sur les montres du quotidien : des silhouettes contemporaines, des matériaux choisis et des prix accessibles. Des classiques discrets aux chronographes expressifs, chaque pièce est sélectionnée pour vous accompagner.",
+  seoTitle: "Ayoub Shop | Montres et accessoires premium",
+  seoDescription: "Découvrez les montres modernes d’Ayoub Shop. Explorez la collection, achetez en dirhams marocains et payez en espèces à la livraison au Maroc.",
+  seoCollection: "Montres premium au Maroc",
+  seoNotFound: "Montre introuvable",
 };
 const ar: Dictionary = {
   ...en,
@@ -620,9 +628,21 @@ const ar: Dictionary = {
     "الأسعار بالدرهم المغربي. توفر المنتجات مرتبط بالمخزون. تُعرض الأسعار والتوصيل والكميات قبل التأكيد. الدفع نقداً عند الاستلام. قدم بيانات صحيحة وعنواناً داخل المغرب. اطلب التعديل أو الإلغاء قبل الشحن. الصور لقطات استوديو توضيحية. تبقى حقوق المستهلك القانونية سارية.",
   storyPolicy:
     "يقدم أيوب شوب نظرة جديدة لساعات الحياة اليومية. تصاميم عصرية ومواد مختارة وأسعار مناسبة. من الكلاسيكية البسيطة إلى الكرونوغراف المميز، كل قطعة مختارة لترافقك بأسلوبك.",
+  seoTitle: "أيوب شوب | ساعات وإكسسوارات راقية",
+  seoDescription: "اكتشف الساعات العصرية من أيوب شوب. تصفح المجموعة وتسوق بالدرهم المغربي مع الدفع نقداً عند الاستلام في جميع أنحاء المغرب.",
+  seoCollection: "ساعات راقية في المغرب",
+  seoNotFound: "الساعة غير موجودة",
 };
 export const dictionaries = { en, fr, ar };
 export type TranslationKey = keyof typeof en;
+export type ContentOverrides = Partial<Record<TranslationKey, Record<Locale, string>>>;
+export const localizedDictionary = (locale: Locale, overrides: ContentOverrides = {}) => {
+  const values: Record<TranslationKey, string> = { ...dictionaries[locale] };
+  for (const key of Object.keys(overrides) as TranslationKey[]) {
+    if (key in values && overrides[key]?.[locale]) values[key] = overrides[key][locale];
+  }
+  return values;
+};
 export const productName = (p: Product, l: Locale) =>
   l === "ar" ? p.nameAr || p.name : l === "fr" ? p.nameFr || p.name : p.name;
 export const productDescription = (p: Product, l: Locale) =>
@@ -631,7 +651,9 @@ export const productDescription = (p: Product, l: Locale) =>
     : l === "fr"
       ? p.descriptionFr || p.description
       : p.description;
-export const formatMoney = (value: number, l: Locale = "en") =>
+export const productDetail = (p: Product, l: Locale, field: keyof ProductDetails) =>
+  l === "en" ? p[field] ?? "" : p.localizedDetails?.[l]?.[field] || p[field] || "";
+export const formatMoney = (value: number, l: Locale = "fr") =>
   new Intl.NumberFormat(l === "ar" ? "ar-MA" : l === "fr" ? "fr-MA" : "en-GB", {
     maximumFractionDigits: 0,
   }).format(value);

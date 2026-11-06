@@ -181,6 +181,34 @@ try {
   const catalog = await request("/api/admin/products", { authenticated: true });
   assert.ok(Array.isArray(catalog.data.products));
 
+  await check("Content editing requires all three languages and appears in the selected visitor language", async () => {
+    await request("/api/admin/content", { expected: 401 });
+    await request("/api/admin/content", { method: "PUT", data: { key: "freeTop", en: "One", fr: "Un", ar: "واحد" }, expected: 401 });
+    const content = await request("/api/admin/content", { authenticated: true });
+    const previous = content.data.overrides.freeTop || {
+      en: content.data.defaults.en.freeTop, fr: content.data.defaults.fr.freeTop, ar: content.data.defaults.ar.freeTop,
+    };
+    await request("/api/admin/content", { method: "PUT", authenticated: true, data: { key: "freeTop", en: "Local English test", fr: "Test français local", ar: "اختبار عربي محلي" }, expected: 200 });
+    await request("/api/admin/content", { method: "PUT", authenticated: true, data: { key: "freeTop", en: "Incomplete", fr: "", ar: "ناقص" }, expected: 400 });
+    await request("/api/admin/content", { method: "PUT", authenticated: true, data: { key: "freeTop", en: "Only English changed", fr: "Test français local", ar: "اختبار عربي محلي" }, expected: 400 });
+    await request("/api/admin/content", { method: "PUT", authenticated: true, data: { key: "not_a_real_key", en: "One", fr: "Un", ar: "واحد" }, expected: 400 });
+    const french = await request("/");
+    assert.match(french.data, /<html[^>]*lang="fr"/);
+    assert.ok(french.data.includes("Test français local"));
+    const arabic = await request("/", { headers: { Cookie: "ayoub-language=ar" } });
+    assert.ok(arabic.data.includes("اختبار عربي محلي"));
+    const english = await request("/", { headers: { Cookie: "ayoub-language=en" } });
+    assert.ok(english.data.includes("Local English test"));
+    const beforeImage = content.data.editorialAsset;
+    await request("/api/admin/content", { method: "PUT", authenticated: true, data: { type: "image", slot: "editorialImage", image: "/images/watch-silver.webp", en: "Local silver watch", fr: "Montre argentée locale", ar: "ساعة فضية محلية" } });
+    const imagePage = await request("/");
+    assert.ok(imagePage.data.includes("/images/watch-silver.webp"));
+    assert.ok(imagePage.data.includes("Montre argentée locale"));
+    await request("/api/admin/content", { method: "PUT", authenticated: true, data: { type: "image", slot: "editorialImage", image: "/images/watch-gold.webp", en: "Local silver watch", fr: "Montre argentée locale", ar: "ساعة فضية محلية" }, expected: 400 });
+    await request("/api/admin/content", { method: "PUT", authenticated: true, data: { type: "image", ...beforeImage } });
+    await request("/api/admin/content", { method: "PUT", authenticated: true, data: { key: "freeTop", ...previous } });
+  });
+
   let uploadedImage;
   await check("A real PNG uploads to R2 and is served byte-for-byte with immutable caching", async () => {
     const bytes = await readFile(new URL("../public/images/watch-hero.png", import.meta.url));
@@ -207,6 +235,7 @@ try {
       description: "A local integration fixture used to verify the complete product lifecycle.",
       nameFr: "Montre de test local", nameAr: "ساعة للاختبار المحلي",
       descriptionFr: "Produit local de vérification du catalogue.", descriptionAr: "منتج محلي للتحقق من وظائف المتجر.",
+      localizedDetails: { fr: { subtitle: "Vérification locale uniquement", badge: "Test local", color: "Noir", movement: "Quartz", caseSize: "40 mm", waterResistance: "3 ATM", material: "Acier inoxydable" }, ar: { subtitle: "للتحقق المحلي فقط", badge: "اختبار محلي", color: "أسود", movement: "كوارتز", caseSize: "40 مم", waterResistance: "3 ATM", material: "فولاذ مقاوم للصدأ" } },
       price: 680, compareAt: 990, category: "Classic", color: "Black", movement: "Quartz",
       caseSize: "40 mm", waterResistance: "3 ATM", material: "Stainless steel", stock: 8,
       images: [uploadedImage, "/images/watch-blue.png"], featured: false, badge: "Local test",
@@ -319,7 +348,9 @@ try {
   });
 
   await check("Archived products leave the storefront while original order snapshots remain intact", async () => {
-    await request(`/api/admin/products/${createdProduct.id}`, { method: "PATCH", authenticated: true, data: { price: 799, name: "Local integration updated watch" } });
+    await request(`/api/admin/products/${createdProduct.id}`, { method: "PATCH", authenticated: true, data: { name: "Local integration updated watch" }, expected: 400 });
+    const current = await product();
+    await request(`/api/admin/products/${createdProduct.id}`, { method: "PATCH", authenticated: true, data: { ...current, price: 799, name: "Local integration updated watch", nameFr: "Montre locale modifiée", nameAr: "ساعة محلية معدلة" } });
     await request(`/api/admin/products/${createdProduct.id}`, { method: "DELETE", authenticated: true });
     archived = true;
     await request(`/api/products/${slug}`, { expected: 404 });

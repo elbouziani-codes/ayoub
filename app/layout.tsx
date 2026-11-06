@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
-import { getRequestLocale, pageMetadata, SEO_COPY } from "@/lib/seo";
+import { getRequestLocale, pageMetadata } from "@/lib/seo";
+import { localizedDictionary } from "@/lib/i18n";
+import { getContentOverrides } from "@/lib/server/content";
 import { SITE_NAME, SITE_URL } from "@/lib/shop-config";
 import "./globals.css";
 import "./upgrade.css";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getRequestLocale();
-  const copy = SEO_COPY[locale];
+  const [locale, overrides] = await Promise.all([getRequestLocale(), getContentOverrides()]);
+  const copy = localizedDictionary(locale, overrides);
   return {
-    ...pageMetadata({ locale, title: copy.title, description: copy.description, path: "/" }),
+    ...pageMetadata({ locale, title: copy.seoTitle, description: copy.seoDescription, path: "/" }),
     metadataBase: new URL(SITE_URL),
     applicationName: SITE_NAME,
-    title: { default: copy.title, template: `%s | ${SITE_NAME}` },
+    title: { default: copy.seoTitle, template: `%s | ${SITE_NAME}` },
     robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
     icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
   };

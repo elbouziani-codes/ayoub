@@ -3,8 +3,9 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import Storefront from "@/components/storefront";
 import { listProducts, getProductBySlug } from "@/lib/server/catalog";
-import { productDescription, productName } from "@/lib/i18n";
-import { getRequestLocale, pageMetadata, productPath, productStructuredData, SEO_COPY, serializeJsonLd } from "@/lib/seo";
+import { localizedDictionary, productDescription, productName } from "@/lib/i18n";
+import { getRequestLocale, pageMetadata, productPath, productStructuredData, serializeJsonLd } from "@/lib/seo";
+import { getContentOverrides, getEditorialAsset } from "@/lib/server/content";
 export const dynamic = "force-dynamic";
 const findProduct = cache(getProductBySlug);
 export async function generateMetadata({
@@ -14,7 +15,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const [product, locale] = await Promise.all([findProduct(slug), getRequestLocale()]);
-  if (!product) return { title: SEO_COPY[locale].notFound, robots: { index: false, follow: true } };
+  if (!product) return { title: localizedDictionary(locale, await getContentOverrides()).seoNotFound, robots: { index: false, follow: true } };
   return pageMetadata({
     locale,
     title: productName(product, locale),
@@ -29,20 +30,22 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [product, locale] = await Promise.all([findProduct(slug), getRequestLocale()]);
+  const [product, locale, contentOverrides, editorialAsset] = await Promise.all([findProduct(slug), getRequestLocale(), getContentOverrides(), getEditorialAsset()]);
   if (!product) notFound();
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: serializeJsonLd(productStructuredData(product, locale)),
+          __html: serializeJsonLd(productStructuredData(product, locale, contentOverrides)),
         }}
       />
       <Storefront
         initialProducts={await listProducts()}
         initialProduct={product}
         initialLocale={locale}
+        contentOverrides={contentOverrides}
+        editorialAsset={editorialAsset}
       />
     </>
   );

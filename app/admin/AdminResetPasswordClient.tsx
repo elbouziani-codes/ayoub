@@ -74,7 +74,7 @@ function retryDelay(response: Response, data: { retryAfter?: unknown }): number 
   return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : 60;
 }
 
-export default function AdminResetPasswordClient({ initialLanguage = "en" }: { initialLanguage?: Language }) {
+export default function AdminResetPasswordClient({ initialLanguage = "fr" }: { initialLanguage?: Language }) {
   const [lang, setLang] = useState<Language>(initialLanguage);
   const [session, setSession] = useState<RecoverySession | null>(null);
   const [sessionLoading, setSessionLoading] = useState(true);

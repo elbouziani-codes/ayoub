@@ -1,9 +1,9 @@
-import type { Product } from "./types";
+import type { Product, LocalizedProductDetails } from "./types";
 
 const common = { movement: "Japanese quartz", caseSize: "40 mm", waterResistance: "5 ATM", material: "316L stainless steel" };
 
 /** Initial catalog only. Live availability and prices always come from D1. */
-export const seedProducts: Product[] = [
+const initialSeedProducts: Product[] = [
   { ...common, id: "ayoub-eclipse", slug: "eclipse-chronograph", name: "Eclipse Chronograph", nameFr: "Eclipse Chronographe", nameAr: "إكليبس كرونوغراف", subtitle: "Precision, after dark.", description: "A sculpted black chronograph with a textured dial, three subdials and a brushed steel bracelet. Designed for the hours that matter.", descriptionFr: "Un chronographe noir sculpté, cadran texturé et bracelet en acier brossé. Pour les moments qui comptent.", descriptionAr: "كرونوغراف أسود مصقول بميناء غني بالتفاصيل وسوار من الفولاذ. صُمم للحظات المهمة.", price: 1290, compareAt: 1590, category: "Sport", color: "Obsidian black", stock: 18, images: ["/images/watch-hero.webp"], featured: true, badge: "Bestseller", caseSize: "42 mm" },
   { ...common, id: "ayoub-noir", slug: "noir-automatic", name: "Noir Automatic", nameFr: "Noir Automatique", nameAr: "نوار أوتوماتيك", subtitle: "Quiet confidence.", description: "A midnight dial paired with a smooth black case. A self-winding movement keeps time with your everyday rhythm.", descriptionFr: "Un cadran de minuit et un boîtier noir épuré. Son mouvement automatique suit votre rythme quotidien.", descriptionAr: "ميناء بلون منتصف الليل وهيكل أسود أنيق. حركة أوتوماتيكية تنبض بإيقاع يومك.", price: 890, compareAt: 1090, category: "Classic", color: "Midnight black", movement: "Automatic", stock: 24, images: ["/images/watch-hero.webp"], featured: true },
   { ...common, id: "ayoub-azure", slug: "azure-sport", name: "Azure Sport", nameFr: "Azure Sport", nameAr: "أزور سبورت", subtitle: "A different kind of blue.", description: "A deep blue dial, luminous indices and a solid steel bracelet. A confident companion for city days and coastal weekends.", descriptionFr: "Cadran bleu profond, index lumineux et bracelet en acier. Votre alliée en ville comme en bord de mer.", descriptionAr: "ميناء أزرق عميق ومؤشرات مضيئة وسوار فولاذي متين. رفيقك في المدينة وعلى الساحل.", price: 1150, category: "Sport", color: "Deep blue", waterResistance: "10 ATM", stock: 15, images: ["/images/watch-blue.webp"], featured: true, badge: "New" },
@@ -13,3 +13,22 @@ export const seedProducts: Product[] = [
   { ...common, id: "ayoub-phantom", slug: "phantom-sport", name: "Phantom Sport", nameFr: "Phantom Sport", nameAr: "فانتوم سبورت", subtitle: "Built for your next move.", description: "A purposeful silhouette, high-contrast details and a secure bracelet. Ready for a life in motion.", descriptionFr: "Une silhouette affirmée, des détails contrastés et un bracelet sûr. Prête à vous suivre partout.", descriptionAr: "تصميم قوي وتفاصيل واضحة وسوار ثابت. مستعدة لحياة مليئة بالحركة.", price: 990, category: "Sport", color: "Graphite", caseSize: "42 mm", stock: 14, images: ["/images/watch-hero.webp"], featured: false },
   { ...common, id: "ayoub-obsidian", slug: "obsidian-edition", name: "Obsidian Edition", nameFr: "Édition Obsidienne", nameAr: "إصدار أوبسيديان", subtitle: "The art of standing apart.", description: "Our most distinctive expression of dark elegance. A layered dial and meticulous finishing bring depth to every glance.", descriptionFr: "Notre expression la plus singulière de l'élégance sombre. Un cadran en relief et des finitions soignées.", descriptionAr: "تعبيرنا الأكثر تميزاً عن الأناقة الداكنة. ميناء متعدد الطبقات ولمسات نهائية دقيقة.", price: 1790, category: "Limited", color: "Obsidian", movement: "Automatic", stock: 6, images: ["/images/watch-hero.webp"], featured: false, badge: "Limited" },
 ];
+
+const seedCopy: Record<string, { fr: [string, string, string]; ar: [string, string, string] }> = {
+  "ayoub-eclipse": { fr: ["La précision à la tombée de la nuit.", "Noir obsidienne", "Meilleure vente"], ar: ["دقة تتألق بعد الغروب.", "أسود أوبسيديان", "الأكثر مبيعاً"] },
+  "ayoub-noir": { fr: ["Une élégance discrète.", "Noir de minuit", ""], ar: ["أناقة هادئة وواثقة.", "أسود منتصف الليل", ""] },
+  "ayoub-azure": { fr: ["Un bleu pas comme les autres.", "Bleu profond", "Nouveau"], ar: ["لون أزرق بطابع مختلف.", "أزرق عميق", "جديد"] },
+  "ayoub-sterling": { fr: ["Toujours de bon goût.", "Argenté", ""], ar: ["ذوق رفيع في كل وقت.", "فضي", ""] },
+  "ayoub-midnight": { fr: ["L’essentiel, avec élégance.", "Noir mat", ""], ar: ["بساطة مدروسة بأناقة.", "أسود مطفي", ""] },
+  "ayoub-gold": { fr: ["Un éclat doré pour votre moment.", "Or champagne", "Édition limitée"], ar: ["لحظتك بلمسة ذهبية.", "ذهبي شامبانيا", "إصدار محدود"] },
+  "ayoub-phantom": { fr: ["Prête pour votre prochain élan.", "Graphite", ""], ar: ["جاهزة لخطوتك القادمة.", "غرافيت", ""] },
+  "ayoub-obsidian": { fr: ["L’art de se distinguer.", "Obsidienne", "Édition limitée"], ar: ["فن التميز.", "أوبسيديان", "إصدار محدود"] },
+};
+function localizedSeedDetails(product: Product): LocalizedProductDetails {
+  const copy = seedCopy[product.id];
+  return {
+    fr: { subtitle: copy.fr[0], color: copy.fr[1], badge: copy.fr[2], movement: product.movement === "Automatic" ? "Automatique" : "Quartz japonais", caseSize: product.caseSize, waterResistance: product.waterResistance, material: "Acier inoxydable 316L" },
+    ar: { subtitle: copy.ar[0], color: copy.ar[1], badge: copy.ar[2], movement: product.movement === "Automatic" ? "أوتوماتيكي" : "كوارتز ياباني", caseSize: product.caseSize, waterResistance: product.waterResistance, material: "فولاذ مقاوم للصدأ 316L" },
+  };
+}
+export const seedProducts: Product[] = initialSeedProducts.map((product) => ({ ...product, localizedDetails: localizedSeedDetails(product) }));

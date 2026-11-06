@@ -5,10 +5,16 @@ const cleanText = (min: number, max: number) => z.string().trim().min(min).max(m
 const optionalText = (max: number) => z.string().trim().max(max).optional();
 const imagePath = z.string().max(500).regex(/^\/(?:images\/[a-zA-Z0-9_-]+\.(?:png|jpe?g|webp)|api\/images\/[a-f0-9-]+\.(?:png|jpg|webp))$/, "Use an uploaded product image");
 
-export const productInputSchema = z.object({
+const localizedDetailsSchema = z.object({
+  subtitle: cleanText(0, 180), badge: cleanText(0, 40), color: cleanText(1, 80),
+  movement: cleanText(1, 100), caseSize: cleanText(1, 50),
+  waterResistance: cleanText(1, 60), material: cleanText(1, 150),
+});
+const productFieldsSchema = z.object({
   slug: cleanText(2, 90).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   name: cleanText(2, 120), subtitle: cleanText(0, 180), description: cleanText(10, 5000),
-  nameFr: optionalText(120), nameAr: optionalText(120), descriptionFr: optionalText(5000), descriptionAr: optionalText(5000),
+  nameFr: cleanText(2, 120), nameAr: cleanText(2, 120), descriptionFr: cleanText(10, 5000), descriptionAr: cleanText(10, 5000),
+  localizedDetails: z.object({ fr: localizedDetailsSchema, ar: localizedDetailsSchema }),
   price: z.number().int().min(1).max(1000000), compareAt: z.number().int().min(1).max(1000000).nullable().optional(),
   category: z.enum(["Classic", "Sport", "Minimal", "Limited"]), color: cleanText(1, 80),
   movement: cleanText(1, 100), caseSize: cleanText(1, 50), waterResistance: cleanText(1, 60), material: cleanText(1, 150),
@@ -16,9 +22,28 @@ export const productInputSchema = z.object({
   featured: z.boolean(), badge: optionalText(40),
 });
 
-export const productPatchSchema = productInputSchema.partial().extend({ updatedAt: z.string().datetime().optional() })
+function checkOptionalTranslations(value: z.infer<typeof productFieldsSchema>, ctx: z.RefinementCtx) {
+  for (const locale of ["fr", "ar"] as const) {
+    for (const field of ["subtitle", "badge"] as const) {
+      if (Boolean(value[field]?.trim()) !== Boolean(value.localizedDetails[locale][field].trim())) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["localizedDetails", locale, field], message: `Complete ${locale.toUpperCase()} ${field} when editing this text` });
+      }
+    }
+  }
+}
+export const productInputSchema = productFieldsSchema.superRefine(checkOptionalTranslations);
+const contentFields = ["name", "nameFr", "nameAr", "description", "descriptionFr", "descriptionAr", "subtitle", "badge", "color", "movement", "caseSize", "waterResistance", "material", "localizedDetails"] as const;
+export const productPatchSchema = productFieldsSchema.partial().extend({ updatedAt: z.string().datetime().optional() })
   .refine((value) => Object.keys(value).some((key) => key !== "updatedAt"), "Provide at least one field")
-  .refine((value) => value.stock === undefined || Boolean(value.updatedAt), "Refresh this watch before updating inventory");
+  .refine((value) => value.stock === undefined || Boolean(value.updatedAt), "Refresh this watch before updating inventory")
+  .superRefine((value, ctx) => {
+    if (contentFields.some((field) => field in value)) {
+      const complete = productFieldsSchema.safeParse(value);
+      if (!complete.success) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Save all product text in English, French and Arabic", path: ["localizedDetails"] });
+      } else checkOptionalTranslations(complete.data, ctx);
+    }
+  });
 export const customerSchema = z.object({
   name: cleanText(2, 100),
   phone: z.string().trim().transform((phone) => phone.replace(/[\s().-]/g, "")).pipe(z.string().regex(/^(?:\+212|0)[5-7]\d{8}$/, "Enter a valid Moroccan mobile number")),

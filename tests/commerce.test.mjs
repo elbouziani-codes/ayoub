@@ -63,16 +63,21 @@ test('JSON reader bounds streaming bodies and does not expose server errors', as
 
 test('product validation rejects executable image formats and remote URLs', () => {
   const minimal = { slug: 'new-watch', name: 'New Watch', subtitle: '', description: 'A very nice premium watch.', price: 800, category: 'Classic',
-    color: 'Black', movement: 'Quartz', caseSize: '40 mm', waterResistance: '5 ATM', material: 'Steel', stock: 2, featured: false };
+    color: 'Black', movement: 'Quartz', caseSize: '40 mm', waterResistance: '5 ATM', material: 'Steel', stock: 2, featured: false,
+    nameFr: 'Nouvelle montre', nameAr: 'ساعة جديدة', descriptionFr: 'Une très belle montre de qualité.', descriptionAr: 'ساعة جميلة وعالية الجودة.',
+    localizedDetails: { fr: { subtitle: '', badge: '', color: 'Noir', movement: 'Quartz', caseSize: '40 mm', waterResistance: '5 ATM', material: 'Acier' },
+      ar: { subtitle: '', badge: '', color: 'أسود', movement: 'كوارتز', caseSize: '40 مم', waterResistance: '5 ATM', material: 'فولاذ' } } };
   assert.equal(productInputSchema.safeParse({ ...minimal, images: ['/api/images/1234-abcd.png'] }).success, true);
+  assert.equal(productInputSchema.safeParse({ ...minimal, nameFr: '', images: ['/api/images/1234-abcd.png'] }).success, false);
+  assert.equal(productInputSchema.safeParse({ ...minimal, subtitle: 'New', images: ['/api/images/1234-abcd.png'] }).success, false);
   for (const image of ['javascript:alert(1)', '/images/payload.svg', 'https://external.test/image.png', '/images/../../secret.png']) {
     assert.equal(productInputSchema.safeParse({ ...minimal, images: [image] }).success, false);
   }
 });
 
-test('inventory edits require the current product version, while detail-only patches remain valid', () => {
+test('inventory edits require the current product version and text edits require all three languages', () => {
   assert.equal(productPatchSchema.safeParse({ stock: 5 }).success, false);
   assert.equal(productPatchSchema.safeParse({ stock: 5, updatedAt: '2026-11-06T12:00:00.000Z' }).success, true);
-  assert.equal(productPatchSchema.safeParse({ name: 'New Watch' }).success, true);
+  assert.equal(productPatchSchema.safeParse({ name: 'New Watch' }).success, false);
   assert.equal(productPatchSchema.safeParse({ updatedAt: '2026-11-06T12:00:00.000Z' }).success, false);
 });

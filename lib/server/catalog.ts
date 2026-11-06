@@ -1,19 +1,25 @@
 import { seedProducts } from "../catalog";
-import type { Product } from "../types";
+import type { Product, LocalizedProductDetails } from "../types";
 import { getDatabase } from "./db";
 
 type ProductRow = {
   id: string; slug: string; name: string; subtitle: string; description: string;
   name_fr: string | null; name_ar: string | null; description_fr: string | null; description_ar: string | null;
+  localized_details: string | null;
   price: number; compare_at: number | null; category: Product["category"]; color: string;
   movement: string; case_size: string; water_resistance: string; material: string; stock: number;
   images: string; featured: number; badge: string | null; updated_at: string;
 };
 
 export function productFromRow(row: ProductRow): Product {
+  const seed = seedProducts.find((product) => product.id === row.id);
+  const seedDetails = seed && (["subtitle", "badge", "color", "movement", "caseSize", "waterResistance", "material"] as const)
+    .every((field) => (row[field === "caseSize" ? "case_size" : field === "waterResistance" ? "water_resistance" : field] ?? "") === (seed[field] ?? ""))
+      ? seed.localizedDetails : undefined;
   return { id: row.id, slug: row.slug, name: row.name, subtitle: row.subtitle, description: row.description,
     nameFr: row.name_fr ?? undefined, nameAr: row.name_ar ?? undefined,
     descriptionFr: row.description_fr ?? undefined, descriptionAr: row.description_ar ?? undefined,
+    localizedDetails: row.localized_details ? JSON.parse(row.localized_details) as LocalizedProductDetails : seedDetails,
     price: row.price, compareAt: row.compare_at ?? undefined, category: row.category, color: row.color,
     movement: row.movement, caseSize: row.case_size, waterResistance: row.water_resistance, material: row.material,
     stock: row.stock, images: JSON.parse(row.images), featured: Boolean(row.featured), badge: row.badge ?? undefined, updatedAt: row.updated_at };
@@ -24,11 +30,11 @@ export async function ensureCatalogSeeded(db = getDatabase()): Promise<void> {
   if (await db.prepare("SELECT id FROM products WHERE id = ?").bind(seedProducts[0].id).first()) return;
   const now = new Date().toISOString();
   await db.batch(seedProducts.map((p, index) => db.prepare(`INSERT OR IGNORE INTO products
-    (id, slug, name, subtitle, description, name_fr, name_ar, description_fr, description_ar, price, compare_at,
+    (id, slug, name, subtitle, description, name_fr, name_ar, description_fr, description_ar, localized_details, price, compare_at,
      category, color, movement, case_size, water_resistance, material, stock, images, featured, badge, sort_order, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .bind(p.id, p.slug, p.name, p.subtitle, p.description, p.nameFr ?? null, p.nameAr ?? null, p.descriptionFr ?? null,
-      p.descriptionAr ?? null, p.price, p.compareAt ?? null, p.category, p.color, p.movement, p.caseSize,
+      p.descriptionAr ?? null, p.localizedDetails ? JSON.stringify(p.localizedDetails) : null, p.price, p.compareAt ?? null, p.category, p.color, p.movement, p.caseSize,
       p.waterResistance, p.material, p.stock, JSON.stringify(p.images), p.featured ? 1 : 0, p.badge ?? null, index, now, now)));
 }
 

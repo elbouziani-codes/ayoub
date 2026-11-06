@@ -1,0 +1,1 @@
+ALTER TABLE `products` ADD `localized_details` text;

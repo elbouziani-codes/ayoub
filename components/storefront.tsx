@@ -44,12 +44,14 @@ import LiquidGlass from "./liquid-glass";
 import WatchShowroom from "./watch-showroom";
 import TiltSurface from "./tilt-surface";
 import { useStoreMotion } from "@/hooks/use-store-motion";
-import type { Product, TrackedOrder, Order } from "@/lib/types";
+import type { Product, TrackedOrder, Order, EditorialAsset } from "@/lib/types";
 import {
-  dictionaries,
+  localizedDictionary,
+  type ContentOverrides,
   formatMoney,
   productName,
   productDescription,
+  productDetail,
   type Locale,
   type TranslationKey,
 } from "@/lib/i18n";
@@ -197,18 +199,22 @@ export default function Storefront({
   initialProducts,
   initialProduct,
   catalogUnavailable = false,
-  initialLocale = "en",
+  initialLocale = "fr",
+  contentOverrides = {},
+  editorialAsset = { slot: "editorialImage", image: "/images/watch-blue.webp", en: "Blue dial watch detail", fr: "Détails d’une montre bleue", ar: "تفاصيل ساعة زرقاء" },
 }: {
   initialProducts: Product[];
   initialProduct?: Product;
   catalogUnavailable?: boolean;
   initialLocale?: Locale;
+  contentOverrides?: ContentOverrides;
+  editorialAsset?: EditorialAsset;
 }) {
   const [locale, setLocale] = useState<Locale>(initialLocale);
   const rootRef = useRef<HTMLDivElement>(null);
   const [motionPaused, setMotionPaused] = useState(false);
   useStoreMotion(rootRef, motionPaused);
-  const d = dictionaries[locale];
+  const d = localizedDictionary(locale, contentOverrides);
   const t = (k: TranslationKey) => d[k];
   const [products, setProducts] = useState(initialProducts);
   const [catalogError, setCatalogError] = useState(catalogUnavailable);
@@ -489,7 +495,7 @@ export default function Storefront({
       : filtered.slice(0, 4);
   const searchResults = products
     .filter((p) =>
-      `${p.name} ${p.nameFr} ${p.nameAr} ${p.category} ${p.color} ${p.subtitle}`
+      `${p.name} ${p.nameFr} ${p.nameAr} ${p.category} ${p.color} ${p.subtitle} ${p.localizedDetails?.fr.color ?? ""} ${p.localizedDetails?.ar.color ?? ""}`
         .toLowerCase()
         .includes(query.toLowerCase().trim()),
     )
@@ -808,7 +814,7 @@ export default function Storefront({
             <div className="hero-spec">
               {t("precision")}
               <strong>
-                {hero?.caseSize || "42 mm"} · {t("steel")}
+                {hero ? productDetail(hero, locale, "caseSize") : "42 mm"} · {t("steel")}
               </strong>
             </div>
             <div className="hero-watch-stage">
@@ -1068,7 +1074,7 @@ export default function Storefront({
                           ? t("new")
                           : p.badge.toLowerCase() === "bestseller"
                             ? t("bestseller")
-                            : p.badge}
+                            : productDetail(p, locale, "badge")}
                     </span>
                   )}
                   <button
@@ -1121,8 +1127,8 @@ export default function Storefront({
                     </a>
                     <p className="product-subtitle">
                       {locale === "en"
-                        ? p.subtitle
-                        : `${t(p.category)} · ${p.caseSize}`}
+                        ? productDetail(p, locale, "subtitle")
+                        : `${t(p.category)} · ${productDetail(p, locale, "caseSize")}`}
                     </p>
                     <div className="product-bottom">
                       <Price product={p} />
@@ -1176,16 +1182,10 @@ export default function Storefront({
           <section className="editorial" id="collections" data-reveal>
             <div className="editorial-image">
               <img
-                src="/images/watch-blue.webp"
-                srcSet={productImageSet("/images/watch-blue.webp")}
+                src={editorialAsset.image}
+                srcSet={productImageSet(editorialAsset.image)}
                 sizes="(max-width: 760px) calc(100vw - 36px), 700px"
-                alt={
-                  locale === "ar"
-                    ? "تفاصيل ساعة زرقاء"
-                    : locale === "fr"
-                      ? "Détails d’une montre bleue"
-                      : "Blue dial watch detail"
-                }
+                alt={editorialAsset[locale]}
                 width="700"
                 height="700"
                 loading="lazy"
@@ -1375,7 +1375,7 @@ export default function Storefront({
                     <div>
                       <h3>{p ? productName(p, locale) : t("soldOut")}</h3>
                       <p>
-                        {p?.caseSize} · {p ? t(p.category) : ""}
+                        {p ? productDetail(p, locale, "caseSize") : ""} · {p ? t(p.category) : ""}
                       </p>
                       {(!p || item.quantity > p.stock) && (
                         <p className="cart-warning">{t("cartStock")}</p>
@@ -1492,8 +1492,8 @@ export default function Storefront({
               </ProductHeading>
               <p className="product-subtitle">
                 {locale === "en"
-                  ? selected.subtitle
-                  : `${t(selected.category)} · ${selected.caseSize}`}
+                  ? productDetail(selected, locale, "subtitle")
+                  : `${t(selected.category)} · ${productDetail(selected, locale, "caseSize")}`}
               </p>
               <Price product={selected} />
               <p className="detail-description">
@@ -1544,10 +1544,10 @@ export default function Storefront({
               </div>
               <dl className="detail-specs">
                 {[
-                  ["movement", selected.movement],
-                  ["caseSize", selected.caseSize],
-                  ["waterResistance", selected.waterResistance],
-                  ["material", selected.material],
+                  ["movement", productDetail(selected, locale, "movement")],
+                  ["caseSize", productDetail(selected, locale, "caseSize")],
+                  ["waterResistance", productDetail(selected, locale, "waterResistance")],
+                  ["material", productDetail(selected, locale, "material")],
                 ].map(([k, v]) => (
                   <div key={k}>
                     <dt>{t(k as TranslationKey)}</dt>
@@ -1987,7 +1987,7 @@ export default function Storefront({
                 <div>
                   <h3>{productName(p, locale)}</h3>
                   <p>
-                    {t(p.category)} · {p.caseSize}
+                    {t(p.category)} · {productDetail(p, locale, "caseSize")}
                   </p>
                 </div>
                 <span>

@@ -9,6 +9,7 @@ export const products = sqliteTable("products", {
   description: text("description").notNull(),
   nameFr: text("name_fr"), nameAr: text("name_ar"),
   descriptionFr: text("description_fr"), descriptionAr: text("description_ar"),
+  localizedDetails: text("localized_details"),
   price: integer("price").notNull(), compareAt: integer("compare_at"),
   category: text("category").notNull(), color: text("color").notNull(),
   movement: text("movement").notNull(), caseSize: text("case_size").notNull(),
@@ -61,3 +62,16 @@ export const adminAccounts = sqliteTable("admin_accounts", {
   id: text("id").primaryKey(), email: text("email").notNull(), passwordHash: text("password_hash").notNull(),
   recoveryEmail: text("recovery_email").notNull(), bootstrapVersion: text("bootstrap_version").notNull(),
 }, (table) => [check("admin_accounts_singleton", sql`${table.id} = 'admin'`)]);
+
+/** Merchant-owned storefront copy; each update is saved as a complete language set. */
+export const contentOverrides = sqliteTable("content_overrides", {
+  key: text("key").primaryKey(),
+  en: text("en").notNull(), fr: text("fr").notNull(), ar: text("ar").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const contentAssets = sqliteTable("content_assets", {
+  slot: text("slot").primaryKey(), imagePath: text("image_path").notNull(),
+  altEn: text("alt_en").notNull(), altFr: text("alt_fr").notNull(), altAr: text("alt_ar").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
