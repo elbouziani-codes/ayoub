@@ -7,5 +7,7 @@ declare namespace Cloudflare {
     /** One explicitly provisioned password administrator, configured as runtime secrets. */
     ADMIN_LOGIN_EMAIL?: string;
     ADMIN_PASSWORD_HASH?: string;
+    /** Verified original Sites/ChatGPT email allowed to recover the password. Defaults to bootstrap email. */
+    ADMIN_RECOVERY_EMAIL?: string;
   }
 }

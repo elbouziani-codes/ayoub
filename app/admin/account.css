@@ -1,0 +1,36 @@
+.adm-account { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(240px, 1fr); align-items: start; gap: 22px; max-width: 1120px; }
+.adm-account-panel .adm-panel-head { border-bottom: 1px solid #ffffff09; }
+.adm-account-subtitle { color: #7e8ba3; font-size: 11px; line-height: 1.7; margin-top: 8px; }
+.adm-account-form { display: grid; gap: 22px; padding: 25px 24px; }
+.adm-account-field { display: grid; gap: 9px; min-width: 0; color: #c3cee2; font-size: 11px; }
+.adm-account-field > span { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.adm-account-field small, .adm-account-help { font-size: 10px; color: #8391a9; line-height: 1.8; }
+.adm-account-field > span > small { color: #75839c; font-size: 9px; }
+.adm-account-field input { width: 100%; min-width: 0; min-height: 44px; border: 1px solid #ffffff17; border-radius: 7px; padding: 11px 12px; background: #090e18; color: #e8eef9; font-size: 14px; transition: border-color .15s, box-shadow .15s; }
+.adm-account-field input:focus { outline: none; border-color: #70a5ff; box-shadow: 0 0 0 3px #4d8dff18; }
+.adm-account-field input[aria-invalid=true] { border-color: #d17d86; }
+.adm-account-field input:disabled { opacity: .6; }
+.adm-account-field input:-webkit-autofill { -webkit-text-fill-color: #e8eef9; box-shadow: 0 0 0 1000px #131c2c inset; caret-color: #e8eef9; }
+.adm-account-password-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; border-top: 1px solid #ffffff09; padding-top: 23px; align-items: end; }
+.adm-account-password-fields + .adm-account-help { margin-top: -11px; }
+.adm-account-show { display: flex; align-items: center; justify-self: start; gap: 7px; border: 0; padding: 0; color: #a2b8dc; background: transparent; font-size: 10px; }
+.adm-account-show:hover { color: #d1e0fa; }
+.adm-account-show:focus-visible, .adm-account-recovery a:focus-visible, .adm-account-gate a:focus-visible { outline: 2px solid #70a5ff; outline-offset: 5px; }
+.adm-account-error { color: #f2a1ac; padding: 12px 14px; border: 1px solid #d17d862b; border-radius: 7px; background: #a23e4e0c; font-size: 11px; line-height: 1.8; }
+.adm-account-error > button { margin-top: 8px; color: #ebbfca; }
+.adm-account-save { display: grid; justify-items: start; gap: 19px; padding-top: 20px; border-top: 1px solid #ffffff09; }
+.adm-account-save > p { display: flex; align-items: flex-start; gap: 9px; color: #8296b6; font-size: 10px; line-height: 1.9; }
+.adm-account-save > p > svg { flex-shrink: 0; margin-top: 2px; color: #7da0d5; }
+.adm-account-save .adm-button { min-height: 42px; }
+.adm-account-recovery { padding: 27px 24px; background: radial-gradient(ellipse at top left, #4d8dff0b, transparent 70%), #10151f; }
+.adm-account-recovery-icon { display: flex; align-items: center; justify-content: center; width: 47px; height: 47px; border: 1px solid #4d8dff25; border-radius: 12px; color: #91b4eb; background: #4d8dff0a; margin-bottom: 23px; }
+.adm-account-recovery h2 { color: #d4def0; font-size: 16px; font-weight: 500; line-height: 1.5; }
+.adm-account-recovery p { color: #8798b4; font-size: 11px; line-height: 1.9; margin-top: 14px; }
+.adm-account-recovery strong { display: block; padding: 12px; margin-top: 16px; border: 1px solid #ffffff0d; border-radius: 6px; background: #080d1666; color: #c4d5f0; text-align: start; overflow-wrap: anywhere; font-size: 12px; font-weight: 500; }
+.adm-account-recovery > .adm-text-button { margin-top: 24px; line-height: 1.7; text-align: start; }
+.adm-account-gate { display: grid; justify-items: start; gap: 18px; max-width: 680px; padding: 30px; }
+.adm-account-gate > svg { color: #91b4eb; }
+.adm-account-gate h2 { font-size: 18px; font-weight: 500; }
+.adm-account-gate p { color: #93a5c3; font-size: 12px; line-height: 1.9; }
+@media (max-width: 1150px) { .adm-account { grid-template-columns: minmax(0, 1fr); max-width: 760px; } }
+@media (max-width: 540px) { .adm-account-form { padding: 23px 18px; } .adm-account-password-fields { grid-template-columns: minmax(0, 1fr); gap: 21px; } .adm-account-recovery { padding: 24px 20px; } .adm-account-save > .adm-button { width: 100%; } .adm-account-gate { padding: 24px 20px; } .adm-account-gate > .adm-button { white-space: normal; text-align: start; padding-block: 12px; } }

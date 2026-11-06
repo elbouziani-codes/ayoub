@@ -15,6 +15,13 @@
       "when": 1793978722569,
       "tag": "0001_pale_pandemic",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793979484239,
+      "tag": "0002_skinny_queen_noir",
+      "breakpoints": true
     }
   ]
 }

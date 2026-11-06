@@ -55,3 +55,9 @@ export const adminSessions = sqliteTable("admin_sessions", {
   tokenHash: text("token_hash").primaryKey(), email: text("email").notNull(),
   credentialVersion: text("credential_version").notNull(), expiresAt: integer("expires_at").notNull(),
 }, (table) => [index("admin_sessions_expiry_idx").on(table.expiresAt)]);
+
+/** Singleton account; bootstrap secrets provision it and remain the recovery authority. */
+export const adminAccounts = sqliteTable("admin_accounts", {
+  id: text("id").primaryKey(), email: text("email").notNull(), passwordHash: text("password_hash").notNull(),
+  recoveryEmail: text("recovery_email").notNull(), bootstrapVersion: text("bootstrap_version").notNull(),
+}, (table) => [check("admin_accounts_singleton", sql`${table.id} = 'admin'`)]);
