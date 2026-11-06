@@ -687,7 +687,7 @@ textarea { resize: vertical; min-height: 95px; }
   transition: opacity .3s;
 }
 .liquid-glass:hover::before { opacity: 1; }
-.floating-product.liquid-glass { position: absolute; }
+.floating-product.liquid-glass { position: absolute; background: linear-gradient(135deg,#19202bdf,#0e121bd9); }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .glass,.liquid-glass,.floating-product { background-color: #151b27; }
   .modal-backdrop,.overlay { background: #020409eb; }
