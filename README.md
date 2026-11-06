@@ -22,7 +22,7 @@ node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0005_next_the_enforcers.sql
 ```
 
-Create an ignored `.dev.vars`. Legacy gateway-only development can use:
+Create an ignored `.env` (mode `600`). Legacy gateway-only development can use:
 
 ```text
 ADMIN_EMAILS="seedy@sites.test"
@@ -34,7 +34,7 @@ npm run dev -- --port 5173
 
 Open the URL printed by the server. Administration starts at `/admin/login`; `/admin` redirects there unless authorized. The portable gateway simulation signs in as `seedy@sites.test` and is excluded from production. Development and production databases and image storage are separate.
 
-For password administration, configure `ADMIN_LOGIN_EMAIL` and `ADMIN_PASSWORD_HASH` in the ignored `.dev.vars` locally and as secret runtime values in Sites for hosting. `ADMIN_PASSWORD_HASH` uses `pbkdf2-sha256$100000$<32-character salt hex>$<64-character digest hex>`; generate it with `hashPassword()` in `lib/server/admin-credentials.ts`, never use a plaintext password as the hash. A random strong password and the owner's email are provisioned for this deployment; the private local handoff is `outputs/admin-login.txt` (excluded from Git and deployment). No credential is embedded in application source.
+For password administration, keep `ADMIN_LOGIN_EMAIL` and `ADMIN_PASSWORD_HASH` in the ignored local `.env` and as secret runtime values in Sites for hosting. The local `.env` also holds `ADMIN_PASSWORD` as a private login handoff; the application verifies `ADMIN_PASSWORD_HASH`, so changing the password in the account page or rotating the hash is what changes sign-in. Escape each literal `$` in the hash as `\$` in `.env` so Wrangler reads the complete value. `ADMIN_PASSWORD_HASH` uses `pbkdf2-sha256$100000$<32-character salt hex>$<64-character digest hex>`; generate it with `hashPassword()` in `lib/server/admin-credentials.ts`, never use a plaintext password as the hash. A random strong password and the owner's email are provisioned for this deployment; the private local handoff is also in `outputs/admin-login.txt` (excluded from Git and deployment). No credential is embedded in application source.
 
 When either password setting is present, password authorization takes precedence over the legacy gateway allowlist. Missing or malformed settings fail closed. With both settings absent, the original Sites sign-in plus `ADMIN_EMAILS` allowlist remains available. The private hosting gate still applies to the entire Site.
 

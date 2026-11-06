@@ -174,7 +174,7 @@ try {
       cookie = signedIn.cookie;
       const { data } = await request("/api/admin/session", { authenticated: true });
       assert.equal(data.authenticated, true);
-      assert.equal(data.isAdmin, true, "Set ADMIN_EMAILS=seedy@sites.test in local .dev.vars");
+      assert.equal(data.isAdmin, true, "Set ADMIN_EMAILS=seedy@sites.test in local .env");
       assert.equal(data.user.email, "seedy@sites.test");
     });
   }
