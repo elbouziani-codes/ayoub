@@ -1,6 +1,8 @@
 /**
  * End-to-end API smoke checks against LOCAL development only.
- * Run a local Vite server with ADMIN_EMAILS=seedy@sites.test in .dev.vars, then:
+ * Run a local Vite server with a configured password administrator, then:
+ *   ADMIN_TEST_EMAIL=... ADMIN_TEST_PASSWORD=... node tests/integration.mjs http://127.0.0.1:5173
+ * The legacy gateway-only configuration uses ADMIN_EMAILS=seedy@sites.test:
  *   node tests/integration.mjs http://127.0.0.1:5173
  * Uses the actual local sign-in cookie, D1 and R2 bindings; no fabricated identity
  * headers. Fixtures are clearly labelled and products are archived on completion.
@@ -20,6 +22,9 @@ let cookie = "";
 let createdProduct;
 let archived = false;
 let passed = 0;
+let passwordMode = false;
+let loginAttempts = 0;
+let loginCredentials;
 const fixtures = new Map();
 
 async function check(name, fn) {
@@ -28,9 +33,9 @@ async function check(name, fn) {
   console.log(`✓ ${name}`);
 }
 
-async function request(path, { method = "GET", data, body, authenticated = false, expected = 200, headers = {} } = {}) {
+async function request(path, { method = "GET", data, body, authenticated = false, expected = 200, headers = {}, includeOrigin = true } = {}) {
   const requestHeaders = new Headers(headers);
-  if (method !== "GET" && method !== "HEAD" && !requestHeaders.has("Origin")) requestHeaders.set("Origin", origin);
+  if (includeOrigin && method !== "GET" && method !== "HEAD" && !requestHeaders.has("Origin")) requestHeaders.set("Origin", origin);
   if (authenticated) {
     assert.ok(cookie, "Sign in through the local authentication route first");
     requestHeaders.set("Cookie", cookie);
@@ -44,6 +49,25 @@ async function request(path, { method = "GET", data, body, authenticated = false
   const result = contentType.includes("application/json") ? await response.json() : await response.text();
   assert.equal(response.status, expected, `${method} ${path.split("?")[0]}: expected ${expected}, received ${response.status}${result?.error ? ` (${result.error})` : ""}`);
   return { response, data: result };
+}
+
+function responseCookie(response) {
+  const setCookies = response.headers.getSetCookie();
+  assert.ok(setCookies.length, "Sign-in should set a session cookie");
+  return { setCookies, cookie: setCookies.map(value => value.split(";")[0]).join("; ") };
+}
+
+async function gatewaySignIn() {
+  const { response } = await request("/signin-with-chatgpt?return_to=%2Fadmin", {
+    expected: 302, headers: { "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Dest": "document" },
+  });
+  assert.equal(response.headers.get("Location"), "/admin");
+  return responseCookie(response);
+}
+
+async function passwordSignIn(data = loginCredentials, expected = 200) {
+  loginAttempts += 1;
+  return request("/api/admin/login", { method: "POST", data, expected });
 }
 
 async function product() {
@@ -81,27 +105,81 @@ try {
     assert.equal(data.authenticated, false);
     assert.equal(data.isAdmin, false);
     assert.equal(data.user, null);
+    passwordMode = data.passwordLoginAvailable === true;
     await request("/api/admin/products", { expected: 401 });
     await request("/api/admin/orders", { expected: 401 });
     await request("/api/admin/products", { method: "POST", data: {}, expected: 401 });
   });
 
-  await check("Local sign-in establishes an HttpOnly cookie and an allowlisted session", async () => {
-    const { response } = await request("/signin-with-chatgpt?return_to=%2Fadmin", {
-      expected: 302, headers: { "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Dest": "document" },
+  if (passwordMode) {
+    const email = process.env.ADMIN_TEST_EMAIL;
+    const password = process.env.ADMIN_TEST_PASSWORD;
+    assert.ok(email && password, "Set ADMIN_TEST_EMAIL and ADMIN_TEST_PASSWORD for the local password administrator");
+    loginCredentials = { email: email.trim().toLowerCase(), password };
+
+    await check("A gateway sign-in cannot bypass the configured administrator password", async () => {
+      const gateway = await gatewaySignIn();
+      const { data } = await request("/api/admin/session", { headers: { Cookie: gateway.cookie } });
+      assert.equal(data.authenticated, false);
+      assert.equal(data.isAdmin, false);
+      await request("/api/admin/products", { headers: { Cookie: gateway.cookie }, expected: 401 });
     });
-    assert.equal(response.headers.get("Location"), "/admin");
-    const setCookies = response.headers.getSetCookie();
-    assert.ok(setCookies.length, "Local sign-in should set a session cookie");
-    assert.ok(setCookies.every(value => /HttpOnly/i.test(value) && /SameSite=Lax/i.test(value)));
-    cookie = setCookies.map(value => value.split(";")[0]).join("; ");
-    const { data } = await request("/api/admin/session", { authenticated: true });
-    assert.equal(data.authenticated, true);
-    assert.equal(data.isAdmin, true, "Set ADMIN_EMAILS=seedy@sites.test in local .dev.vars");
-    assert.equal(data.user.email, "seedy@sites.test");
-    const catalog = await request("/api/admin/products", { authenticated: true });
-    assert.ok(Array.isArray(catalog.data.products));
-  });
+
+    await check("Password sign-in normalizes email and sets a private eight-hour session cookie", async () => {
+      const { response, data } = await passwordSignIn({ ...loginCredentials, email: `  ${email.toUpperCase()}  ` });
+      const signedIn = responseCookie(response);
+      assert.ok(signedIn.setCookies.every(value => /HttpOnly/i.test(value) && /SameSite=Strict/i.test(value)
+        && /(?:^|;)\s*Path=\//i.test(value) && /Max-Age=28800/i.test(value) && !/(?:^|;)\s*Secure(?:;|$)/i.test(value)
+        && !/(?:^|;)\s*Domain=/i.test(value)));
+      cookie = signedIn.cookie;
+      assert.equal(data.authenticated, true);
+      assert.equal(data.isAdmin, true);
+      assert.equal(data.authMethod, "password");
+      assert.equal(data.user.email, loginCredentials.email);
+      assert.ok(!JSON.stringify(data).includes(cookie.split("=")[1]), "The bearer token belongs only in the HttpOnly cookie");
+      const session = await request("/api/admin/session", { authenticated: true });
+      assert.equal(session.data.isAdmin, true);
+    });
+
+    await check("Login and logout reject missing or cross-site origins without revoking the active session", async () => {
+      for (const path of ["/api/admin/login", "/api/admin/logout"]) {
+        const options = { method: "POST", authenticated: true, data: loginCredentials, expected: 403 };
+        await request(path, { ...options, includeOrigin: false });
+        await request(path, { ...options, headers: { Origin: "https://external.invalid" } });
+        await request(path, { ...options, headers: { "Sec-Fetch-Site": "cross-site" } });
+      }
+      assert.equal((await request("/api/admin/session", { authenticated: true })).data.isAdmin, true);
+    });
+
+    await check("Incorrect credentials are generic, and logout revokes the original session before a fresh login", async () => {
+      const wrongPassword = password === "invalid-local-password" ? "another-invalid-password" : "invalid-local-password";
+      const invalid = await passwordSignIn({ email: loginCredentials.email, password: wrongPassword }, 401);
+      assert.deepEqual(invalid.data, { error: "Invalid email or password.", code: "invalid_credentials" });
+      assert.equal(invalid.response.headers.get("Set-Cookie"), null);
+      const originalCookie = cookie;
+      const logout = await request("/api/admin/logout", { method: "POST", authenticated: true });
+      assert.ok(logout.response.headers.getSetCookie().some(value => /Max-Age=0(?:;|$)/i.test(value)));
+      const revoked = await request("/api/admin/session", { headers: { Cookie: originalCookie } });
+      assert.equal(revoked.data.authenticated, false);
+      await request("/api/admin/products", { headers: { Cookie: originalCookie }, expected: 401 });
+      const fresh = await passwordSignIn();
+      cookie = responseCookie(fresh.response).cookie;
+      assert.notEqual(cookie, originalCookie);
+      assert.equal((await request("/api/admin/session", { authenticated: true })).data.isAdmin, true);
+    });
+  } else {
+    await check("Local gateway sign-in establishes an HttpOnly cookie and an allowlisted session", async () => {
+      const signedIn = await gatewaySignIn();
+      assert.ok(signedIn.setCookies.every(value => /HttpOnly/i.test(value) && /SameSite=Lax/i.test(value)));
+      cookie = signedIn.cookie;
+      const { data } = await request("/api/admin/session", { authenticated: true });
+      assert.equal(data.authenticated, true);
+      assert.equal(data.isAdmin, true, "Set ADMIN_EMAILS=seedy@sites.test in local .dev.vars");
+      assert.equal(data.user.email, "seedy@sites.test");
+    });
+  }
+  const catalog = await request("/api/admin/products", { authenticated: true });
+  assert.ok(Array.isArray(catalog.data.products));
 
   let uploadedImage;
   await check("A real PNG uploads to R2 and is served byte-for-byte with immutable caching", async () => {
@@ -256,6 +334,24 @@ try {
       assert.equal(stored.items[0].price, 725);
     }
   });
+
+  if (passwordMode) {
+    await check("The sixth login attempt is blocked with a usable Retry-After while an existing session remains valid", async () => {
+      // Consume the remaining attempts only after all commerce fixtures are archived.
+      while (loginAttempts < 5) {
+        const invalid = await passwordSignIn({ email: loginCredentials.email, password: "invalid-local-password-attempt" }, 401);
+        assert.equal(invalid.data.code, "invalid_credentials");
+      }
+      const blocked = await passwordSignIn(loginCredentials, 429);
+      const retryAfter = Number(blocked.response.headers.get("Retry-After"));
+      assert.ok(Number.isInteger(retryAfter) && retryAfter > 0 && retryAfter <= 900);
+      assert.equal(blocked.data.code, "rate_limited");
+      assert.equal(blocked.data.retryAfter, retryAfter);
+      assert.equal(blocked.response.headers.get("Cache-Control"), "no-store");
+      assert.equal(blocked.response.headers.get("Set-Cookie"), null);
+      assert.equal((await request("/api/admin/session", { authenticated: true })).data.isAdmin, true);
+    });
+  }
 
   console.log(`\n${passed} local integration checks passed. The test product is archived; test orders remain labelled Local integration.`);
 } catch (error) {

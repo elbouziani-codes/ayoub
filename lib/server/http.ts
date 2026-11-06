@@ -3,7 +3,8 @@ import { ZodError } from "zod";
 export class HttpError extends Error {
   status: number;
   code: string;
-  constructor(status: number, message: string, code = "request_failed") { super(message); this.status = status; this.code = code; }
+  headers: Record<string, string>;
+  constructor(status: number, message: string, code = "request_failed", headers: Record<string, string> = {}) { super(message); this.status = status; this.code = code; this.headers = headers; }
 }
 
 export function json(data: unknown, status = 200): Response {
@@ -14,7 +15,12 @@ export function json(data: unknown, status = 200): Response {
 }
 
 export function handleError(error: unknown): Response {
-  if (error instanceof HttpError) return json({ error: error.message, code: error.code }, error.status);
+  if (error instanceof HttpError) {
+    const retryAfter = Number(error.headers["Retry-After"]);
+    const response = json({ error: error.message, code: error.code, ...(retryAfter > 0 ? { retryAfter } : {}) }, error.status);
+    for (const [key, value] of Object.entries(error.headers)) response.headers.set(key, value);
+    return response;
+  }
   if (error instanceof ZodError) return json({ error: error.issues[0]?.message ?? "Check your details", code: "invalid_input" }, 400);
   // Keep internal SQL, binding names, personal information, and stack traces out of responses.
   console.error("Shop request failed", error instanceof Error ? error.name : "unknown");

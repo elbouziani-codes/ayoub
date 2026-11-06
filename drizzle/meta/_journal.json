@@ -8,6 +8,13 @@
       "when": 1793962910360,
       "tag": "0000_huge_captain_marvel",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1793978722569,
+      "tag": "0001_pale_pandemic",
+      "breakpoints": true
     }
   ]
 }

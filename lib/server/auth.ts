@@ -2,12 +2,16 @@ import { getChatGPTUser } from "../../app/chatgpt-auth";
 import type { AdminSession } from "../types";
 import { getAdminEmails } from "./db";
 import { HttpError } from "./http";
+import { passwordAdminSession } from "./admin-auth";
 
 export async function adminSession(): Promise<AdminSession> {
-  // Identity is provided by the Sites trusted authentication gateway, never by a client field.
+  // An explicitly configured password administrator requires its own session.
+  // The Sites gateway still protects the audience of private hosted stores.
+  const passwordSession = await passwordAdminSession();
+  if (passwordSession) return passwordSession;
   const user = await getChatGPTUser();
   return { authenticated: Boolean(user), isAdmin: Boolean(user && getAdminEmails().includes(user.email.toLowerCase())),
-    user: user ? { email: user.email, displayName: user.displayName } : null };
+    user: user ? { email: user.email, displayName: user.displayName } : null, ...(user ? { authMethod: "chatgpt" as const } : {}), passwordLoginAvailable: false };
 }
 
 export async function requireAdmin(): Promise<AdminSession> {

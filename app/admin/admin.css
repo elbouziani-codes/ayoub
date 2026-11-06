@@ -324,6 +324,36 @@
 .adm-setup code { display: inline-block; font-size: 8px; color: #9ab2d6; background: #070f1d66; border: 1px solid #7897c218; border-radius: 4px; padding: 6px 8px; margin-top: 12px; max-width: 100%; overflow-wrap: anywhere; }
 .adm-auth-content > .adm-button { margin-top: 25px; }
 .adm-auth-content > .adm-spin { margin-top: 30px; color: #6b8dbb; }
+.adm-login-shell .adm-auth-main { padding-block: 48px; }
+.adm-login-form { display: grid; gap: 17px; margin-top: 27px; max-width: 390px; text-align: start; }
+.adm-login-field { display: grid; gap: 8px; color: #acb8cb; font-size: 11px; }
+.adm-login-field input { width: 100%; min-width: 0; min-height: 46px; border: 1px solid #ffffff16; border-radius: 7px; padding: 11px 13px; color: #eef2fa; background: #0f131d; font-size: 14px; transition: border-color .15s, box-shadow .15s; }
+.adm-login-field input:focus { outline: none; border-color: #70a5ff; box-shadow: 0 0 0 3px #4d8dff18; }
+.adm-login-field input:disabled { opacity: .65; }
+.adm-login-field input:-webkit-autofill { -webkit-text-fill-color: #eef2fa; box-shadow: 0 0 0 1000px #131c2c inset; caret-color: #eef2fa; }
+.adm-login-password { position: relative; }
+.adm-login-password input { padding-inline-end: 49px; }
+.adm-login-password button { position: absolute; inset-inline-end: 5px; top: 4px; width: 38px; height: 38px; display: grid; place-items: center; border: 0; border-radius: 5px; color: #93a3bd; background: transparent; }
+.adm-login-password button:hover { color: #e0e9f8; background: #ffffff08; }
+.adm-login-shell[dir=rtl] .adm-login-password input { padding-right: 13px; padding-left: 49px; }
+.adm-login-submit { width: 100%; min-height: 45px; margin-top: 3px; font-size: 12px; }
+.adm-login-error { color: #f8a7a7; font-size: 11px; line-height: 1.7; }
+.adm-login-countdown { color: #b3c4df; text-align: center; font-size: 11px; font-variant-numeric: tabular-nums; }
+.adm-login-alternative { display: grid; gap: 13px; max-width: 390px; margin-top: 25px; }
+.adm-login-alternative > span { display: flex; align-items: center; gap: 10px; color: #63728a; font-size: 9px; }
+.adm-login-alternative > span:before, .adm-login-alternative > span:after { content: ""; flex: 1; height: 1px; background: #ffffff0c; }
+.adm-login-alternative > .adm-button { min-height: 43px; font-size: 11px; }
+.adm-login-alternative > .adm-button svg:last-child { margin-inline-start: auto; }
+.adm-login-alternative > .adm-button svg:first-child { margin-inline-end: auto; }
+.adm-login-notice { max-width: 390px; padding: 15px; margin-top: 23px; text-align: start; border: 1px solid #7897c225; border-radius: 8px; background: #7897c207; }
+.adm-login-notice > p { font-size: 11px; color: #a8bad6; line-height: 1.8; }
+.adm-login-notice > .adm-button, .adm-login-notice > .adm-text-button { margin-top: 14px; }
+.adm-login-notice .adm-auth-account { margin-top: 12px; align-items: flex-start; }
+.adm-login-loading { display: flex; align-items: center; gap: 10px; min-height: 100px; color: #93abc9; font-size: 12px; }
+.adm-profile-signout { display: inline-flex; align-items: center; gap: 8px; width: 100%; margin-top: 16px; padding: 9px 10px; border: 1px solid #ffffff0d; border-radius: 6px; color: #939fb5; background: #ffffff03; font-size: 10px; }
+.adm-profile-signout:hover { color: #e4edfc; border-color: #ffffff22; }
+@media (max-width: 760px) { .adm-login-form, .adm-login-alternative, .adm-login-notice { margin-inline: auto; }.adm-login-loading { justify-content: center; }.adm-login-shell .adm-auth-main { padding-block: 34px 45px; gap: 27px; }.adm-login-shell .adm-auth-art { width: 160px; height: 160px; }.adm-login-shell .adm-auth-watch { width: 90px; height: 90px; border-radius: 25px; }.adm-login-shell .adm-auth-watch > svg { width: 58px; height: 58px; }.adm-login-shell .adm-auth-orbit-dot { top: 22px; right: 16px; }.adm-login-shell .adm-auth-content > h1 { font-size: 36px; }.adm-login-shell .adm-auth-content > p { margin-top: 16px; } }
+@media (max-width: 480px) { .adm-login-field input { font-size: 16px; }.adm-login-shell .adm-auth-art { display: none; }.adm-login-shell .adm-auth-main { padding-inline: 24px; }.adm-login-shell .adm-auth-content > h1 { font-size: 34px; }.adm-login-shell .adm-auth-nav { height: 76px; }.adm-login-shell .adm-auth-footer { font-size: 8px; } }
 .adm-shell[dir=rtl] .adm-nav-arrow, .adm-shell[dir=rtl] .adm-breadcrumb > svg, .adm-shell[dir=rtl] .adm-text-button > svg, .adm-shell[dir=rtl] .adm-stock-item > svg { transform: rotate(180deg); }
 .adm-shell[dir=rtl] .adm-eyebrow, .adm-auth-shell[dir=rtl] .adm-eyebrow { letter-spacing: .3px; }
 .adm-shell[dir=rtl] .adm-page-heading h1, .adm-auth-shell[dir=rtl] .adm-auth-content > h1 { letter-spacing: -.8px; line-height: 1.4; }

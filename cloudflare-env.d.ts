@@ -4,5 +4,8 @@ declare namespace Cloudflare {
     BUCKET?: R2Bucket;
     /** Comma-separated emails allowed to administer the shop. Empty denies everyone. */
     ADMIN_EMAILS?: string;
+    /** One explicitly provisioned password administrator, configured as runtime secrets. */
+    ADMIN_LOGIN_EMAIL?: string;
+    ADMIN_PASSWORD_HASH?: string;
   }
 }

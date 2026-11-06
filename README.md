@@ -11,13 +11,14 @@ npm run install:ci
 npm run build
 ```
 
-Apply the initial migration **once** to a fresh local database:
+Apply each migration **once**, in filename order, to a fresh local database (existing databases need only pending migrations):
 
 ```sh
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_huge_captain_marvel.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_pale_pandemic.sql
 ```
 
-Create an ignored `.dev.vars` for the local mock sign-in:
+Create an ignored `.dev.vars`. Legacy gateway-only development can use:
 
 ```text
 ADMIN_EMAILS="seedy@sites.test"
@@ -27,7 +28,11 @@ ADMIN_EMAILS="seedy@sites.test"
 npm run dev -- --port 5173
 ```
 
-Open the URL printed by the server. The portable development integration signs in as `seedy@sites.test`; use the sign-in link at `/admin`. This identity simulation is excluded from production. Development and production databases and image storage are separate.
+Open the URL printed by the server. Administration starts at `/admin/login`; `/admin` redirects there unless authorized. The portable gateway simulation signs in as `seedy@sites.test` and is excluded from production. Development and production databases and image storage are separate.
+
+For password administration, configure `ADMIN_LOGIN_EMAIL` and `ADMIN_PASSWORD_HASH` in the ignored `.dev.vars` locally and as secret runtime values in Sites for hosting. `ADMIN_PASSWORD_HASH` uses `pbkdf2-sha256$100000$<32-character salt hex>$<64-character digest hex>`; generate it with `hashPassword()` in `lib/server/admin-credentials.ts`, never use a plaintext password as the hash. A random strong password and the owner's email are provisioned for this deployment; the private local handoff is `outputs/admin-login.txt` (excluded from Git and deployment). No credential is embedded in application source.
+
+When either password setting is present, password authorization takes precedence over the legacy gateway allowlist. Missing or malformed settings fail closed. With both settings absent, the original Sites sign-in plus `ADMIN_EMAILS` allowlist remains available. The private hosting gate still applies to the entire Site.
 
 ## Architecture
 
@@ -36,7 +41,7 @@ Open the URL printed by the server. The portable development integration signs i
 - **Backend:** Cloudflare Workers with server-side API authorization and Zod validation.
 - **Records:** Cloudflare D1, schema in `db/schema.ts`, generated SQL in `drizzle/`.
 - **Uploads:** Cloudflare R2; up to eight PNG/JPEG/WebP images per product, each at most 5 MiB. The admin browser decodes photos, preserves their aspect ratio, caps the longest edge at 1600 px, and encodes WebP at quality 0.85. A smaller original is retained only when it already meets the dimension limit. Browsers without WebP encoding use a resized PNG fallback; when image encoding is unavailable, only an original already within the dimension and size limits can be uploaded. Filenames are preserved and server-side MIME/signature checks and the 5 MiB limit still apply. SVG and remote image URLs are rejected. Gallery images can be reordered or removed without breaking historical order snapshots. Existing uploads are unchanged.
-- **Authentication:** Sites gateway sign-in, plus a server-side `ADMIN_EMAILS` allowlist. An empty allowlist denies all administration. There are no default production passwords and no first-user ownership claims.
+- **Authentication:** Explicitly provisioned email/password administrator with PBKDF2-SHA256, a random salt, and opaque 256-bit sessions. D1 stores only session-token hashes with an eight-hour expiry and a credential-version binding. Cookies are HttpOnly, SameSite=Strict and Secure with a `__Host-` name on HTTPS. Logout revokes the database session and clears both cookie variants; a new login rotates its prior session. Changing the configured email or password hash invalidates all existing password sessions. Sites retains its private audience boundary; legacy `ADMIN_EMAILS` gateway authorization is available only when password mode is unconfigured. No public registration, default production password or first-user ownership claim exists.
 - **Locales:** English, French, Arabic with RTL. Language persists in a cookie and local storage; initial storefront rendering honors the cookie. Product translations can be edited in administration.
 - **SEO:** Localized server-rendered catalog/product content, individual canonical URLs, localized social metadata, OnlineStore/Product/Offer/Breadcrumb JSON-LD using actual catalog prices and inventory, sitemap dates, and robots rules. Administration and general APIs are excluded from crawling; product image endpoints remain crawlable. Cookie-selected translations share URLs, so hreflang alternatives are deliberately omitted.
 - **Performance:** Self-hosted variable WOFF2 fonts, responsive 400/800/1100px product images, 80px thumbnails, lazy images below the eager hero, deferred 3D code, immutable caching for uploads, and protected dynamic HTML caching. The four 400px catalog images total 95,886 bytes versus 638,304 bytes for their previous 1100px WebP originals (84.98% smaller). This is an asset comparison, not a Lighthouse or page-speed score.
@@ -77,14 +82,14 @@ Tracking requires both the order number and a strong private code. Only the code
 ```sh
 npm run typecheck
 npm test
-npm run test:integration -- http://127.0.0.1:5173
+ADMIN_TEST_EMAIL="your-configured-email" ADMIN_TEST_PASSWORD="your-local-test-password" npm run test:integration -- http://127.0.0.1:5173
 node tests/seo.test.mjs http://127.0.0.1:5173
 npm run build
 ```
 
-The 16 commerce/SQLite tests cover Moroccan phone validation, shipping, input bounds, idempotency, CSRF checks, transaction rollback, stale catalog/price checks, exactly-once restocking, optimistic stock editing and eight concurrent buyers competing for three units.
+The 27 unit/SQLite tests cover password derivation, session expiry, revocation, rotation, credential changes, limiter privacy, twelve concurrent login clients sharing five permits, and Moroccan phone validation, shipping, input bounds, idempotency, CSRF checks, transaction rollback, stale catalog/price checks, exactly-once restocking, optimistic stock editing and eight concurrent buyers competing for three units.
 
-The 13 live local integration checks exercise real development authentication cookies, D1, R2 uploads and retrieval, ETags, product CRUD and image ordering, stale-version rejection, checkout, replay conflicts, privacy-safe tracking, order transitions, cancellation, pagination and archival. The script refuses non-loopback URLs. It creates clearly marked local fixtures, archives its product, and retains local test orders for auditing.
+The 17 live local integration checks in password mode exercise real credential cookies, gateway-bypass rejection, login/logout CSRF protection, logout replay rejection, the sixth-attempt lockout with Retry-After, D1, R2 uploads and retrieval, ETags, product CRUD and image ordering, stale-version rejection, checkout, replay conflicts, privacy-safe tracking, order transitions, cancellation, pagination and archival. Password credentials come only from `ADMIN_TEST_EMAIL` and `ADMIN_TEST_PASSWORD`; legacy gateway-only mode retains 13 checks. A complete password-mode run deliberately exhausts its local login window, so wait 15 minutes before rerunning or clear only local test rate-limit records. The script refuses non-loopback URLs. It creates clearly marked local fixtures, archives its product, and retains local test orders for auditing.
 
 Browser QA also covered a real local checkout and receipt, private tracking, admin sign-in and cancellation, Arabic RTL, and a 390-pixel mobile viewport. Test data never needs to be copied to the hosted database.
 
@@ -94,7 +99,9 @@ The nine read-only rendered SEO checks verify server-rendered content, canonical
 
 `.openai/hosting.json` identifies the private Sites deployment and declares D1 `DB` and R2 `BUCKET`. Publish with the Sites workflow so migrations apply before the Worker is uploaded. Never edit already-applied migrations; generate a new migration for future schema changes.
 
-Production `ADMIN_EMAILS` is configured through Sites runtime settings, currently for the email supplied by the merchant. Sign in using that exact ChatGPT account email at `/admin`. Changes to the allowlist take effect after a new deployment. It is separate from the local mock identity.
+Production password administration is configured through the Sites runtime secrets `ADMIN_LOGIN_EMAIL` and `ADMIN_PASSWORD_HASH`. Open `/admin/login` and use the provisioned credentials. To rotate the password, generate a new salted hash with `hashPassword()`, replace `ADMIN_PASSWORD_HASH` through Sites runtime settings, and redeploy; old sessions immediately become invalid under the new configuration. The legacy `ADMIN_EMAILS` value is preserved for gateway-only configurations and has no authority while password mode is configured. Runtime changes take effect after deployment.
+
+Login allows 5 attempts per trusted client IP per 15-minute window, plus 20 attempts per normalized email per 15 minutes across addresses. Windows start with the first attempt, and atomic D1 counters are shared by all Workers. The address limit is charged before body parsing or password derivation. Rejected attempts return HTTP 429, a `Retry-After` header and `retryAfter` JSON; the login page displays a countdown. Counters contain only hashed IP/email identifiers, and expired entries are cleaned in bounded batches. Checkout (12/hour) and tracking retain their separate limits.
 
 The application must run behind the trusted Sites authentication gateway, which owns identity headers. Do not expose the raw Worker as an independent public origin. Mutation requests require a same-origin `Origin` header; the local integration tests verify this boundary.
 

@@ -18,4 +18,4 @@ export type Order = {
 };
 /** Public tracking never returns delivery address, phone, email, or notes. */
 export type TrackedOrder = Omit<Order, "customer">;
-export type AdminSession = { authenticated: boolean; isAdmin: boolean; user: { email: string; displayName: string } | null };
+export type AdminSession = { authenticated: boolean; isAdmin: boolean; user: { email: string; displayName: string } | null; authMethod?: "password" | "chatgpt"; passwordLoginAvailable: boolean };

@@ -49,3 +49,9 @@ export const orderItems = sqliteTable("order_items", {
 export const rateLimits = sqliteTable("rate_limits", {
   key: text("key").primaryKey(), count: integer("count").notNull(), expiresAt: integer("expires_at").notNull(),
 }, (table) => [index("rate_limits_expiry_idx").on(table.expiresAt)]);
+
+/** Only hashes of random session tokens are stored; credential changes revoke existing sessions. */
+export const adminSessions = sqliteTable("admin_sessions", {
+  tokenHash: text("token_hash").primaryKey(), email: text("email").notNull(),
+  credentialVersion: text("credential_version").notNull(), expiresAt: integer("expires_at").notNull(),
+}, (table) => [index("admin_sessions_expiry_idx").on(table.expiresAt)]);
