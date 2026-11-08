@@ -173,12 +173,13 @@ export function createWatchScene(
     geometry: THREE.BufferGeometry,
     material: THREE.Material,
     matrices: THREE.Matrix4[],
+    parent: THREE.Object3D = watch,
   ) {
     geometries.add(geometry);
     const object = new THREE.InstancedMesh(geometry, material, matrices.length);
     matrices.forEach((matrix, i) => object.setMatrixAt(i, matrix));
     object.instanceMatrix.needsUpdate = true;
-    watch.add(object);
+    parent.add(object);
     return object;
   }
   const transform = new THREE.Object3D();
@@ -340,20 +341,20 @@ export function createWatchScene(
     ring(radius, 0.01, 0.008, polished, subdial);
     for (let line = 1; line <= 5; line++)
       ring(radius - line * 0.027, 0.0016, 0.004, darkMetal, subdial);
+    const ticks: THREE.Matrix4[] = [];
     for (let tick = 0; tick < 12; tick++) {
       const theta = (tick / 12) * Math.PI * 2;
-      const line = mesh(
-        new THREE.BoxGeometry(0.006, 0.025, 0.005),
-        polished,
-        subdial,
+      ticks.push(
+        matrix(
+          Math.sin(theta) * (radius - 0.035),
+          Math.cos(theta) * (radius - 0.035),
+          0.012,
+          0,
+          -theta,
+        ),
       );
-      line.position.set(
-        Math.sin(theta) * (radius - 0.035),
-        Math.cos(theta) * (radius - 0.035),
-        0.012,
-      );
-      line.rotation.z = -theta;
     }
+    instanced(new THREE.BoxGeometry(0.006, 0.025, 0.005), polished, ticks, subdial);
     const smallHand = new THREE.Group();
     const hand = mesh(
       new THREE.BoxGeometry(0.012, radius * 0.8, 0.008),
@@ -464,12 +465,14 @@ export function createWatchScene(
   }
   sideCylinder(0.125, 0.215, 1.15, 0);
   sideCylinder(0.143, 0.06, 1.265, 0);
+  const crownGrooves: THREE.Matrix4[] = [];
   for (let i = 0; i < 24; i++) {
     const angle = (i / 24) * Math.PI * 2;
-    const groove = mesh(new THREE.BoxGeometry(0.14, 0.014, 0.014), darkMetal);
-    groove.position.set(1.2, Math.sin(angle) * 0.125, Math.cos(angle) * 0.125);
-    groove.rotation.x = -angle;
+    crownGrooves.push(
+      matrix(1.2, Math.sin(angle) * 0.125, Math.cos(angle) * 0.125, -angle),
+    );
   }
+  instanced(new THREE.BoxGeometry(0.14, 0.014, 0.014), darkMetal, crownGrooves);
   for (const y of [-0.49, 0.49]) {
     sideCylinder(0.074, 0.22, 1.044, y);
     sideCylinder(0.092, 0.055, 1.17, y);
@@ -535,6 +538,7 @@ export function createWatchScene(
   let motion = true;
   let autoRotate = true;
   let frame = 0;
+  let frameTimer: ReturnType<typeof setTimeout> | null = null;
   let previousFrame = 0;
   let lastTime = 0;
   let targetX = -0.16;
@@ -542,6 +546,10 @@ export function createWatchScene(
   let targetZ = -0.38;
   let zoomLevel = 11.2;
   let targetZoom = 11.2;
+  let currentFinish: WatchFinish = "midnight";
+  let renderWidth = 0;
+  let renderHeight = 0;
+  let renderRatio = 0;
   let pointer: {
     id: number;
     x: number;
@@ -552,6 +560,16 @@ export function createWatchScene(
     touch: boolean;
   } | null = null;
   watch.rotation.set(targetX, targetY, targetZ);
+
+  // Only the watch and hands change transforms; keep decorative geometry static.
+  const animatedObjects = new Set<THREE.Object3D>([
+    watch, hourHand, minuteHand, secondHand, ...subdialHands,
+  ]);
+  watch.traverse((object) => {
+    if (animatedObjects.has(object)) return;
+    object.updateMatrix();
+    object.matrixAutoUpdate = false;
+  });
 
   function updateTime() {
     const date = new Date();
@@ -566,41 +584,69 @@ export function createWatchScene(
     subdialHands[2].rotation.z = -(seconds / 60) * Math.PI * 2;
   }
   function requestRender() {
-    if (!disposed && active && !frame) frame = requestAnimationFrame(render);
+    if (disposed || !active || frame || frameTimer !== null) return;
+    // Schedule the next displayed frame at 30 fps instead of waking at 60–144 Hz
+    // only to discard most callbacks before drawing.
+    // Leave a short window for the browser's next vsync, avoiding a missed frame
+    // when a 33 ms timer fires just after a 60 Hz display refresh.
+    const delay = Math.max(0, 1000 / 30 - 8 - (performance.now() - previousFrame));
+    if (delay > 0) {
+      frameTimer = setTimeout(() => {
+        frameTimer = null;
+        if (!disposed && active) frame = requestAnimationFrame(render);
+      }, delay);
+    } else frame = requestAnimationFrame(render);
+  }
+  function cancelRender() {
+    if (frame) cancelAnimationFrame(frame);
+    if (frameTimer !== null) clearTimeout(frameTimer);
+    frame = 0;
+    frameTimer = null;
   }
   function render(time: number) {
     frame = 0;
     if (disposed || !active) return;
-    const delta = lastTime ? Math.min((time - lastTime) / 1000, 0.06) : 0;
+    if (motion && time - previousFrame < 32) {
+      requestRender();
+      return;
+    }
+    const delta = lastTime ? Math.min((time - lastTime) / 1000, 0.06) : 1 / 30;
     lastTime = time;
     if (motion && autoRotate && !pointer?.dragging) targetY += delta * 0.065;
     if (motion) {
-      watch.rotation.x += (targetX - watch.rotation.x) * 0.14;
-      watch.rotation.y += (targetY - watch.rotation.y) * 0.14;
-      watch.rotation.z += (targetZ - watch.rotation.z) * 0.14;
-      zoomLevel += (targetZoom - zoomLevel) * 0.14;
+      const easing = 1 - Math.pow(0.86, delta * 60);
+      watch.rotation.x += (targetX - watch.rotation.x) * easing;
+      watch.rotation.y += (targetY - watch.rotation.y) * easing;
+      watch.rotation.z += (targetZ - watch.rotation.z) * easing;
+      zoomLevel += (targetZoom - zoomLevel) * easing;
     } else {
       watch.rotation.set(targetX, targetY, targetZ);
       zoomLevel = targetZoom;
     }
     camera.position.z = zoomLevel;
-    if (time - previousFrame >= 32 || !motion) {
-      if (motion) updateTime();
-      try {
-        renderer.render(scene, camera);
-      } catch {
-        active = false;
-        onFailure();
-        return;
-      }
-      previousFrame = time;
+    if (motion) updateTime();
+    try {
+      renderer.render(scene, camera);
+    } catch {
+      active = false;
+      onFailure();
+      return;
     }
+    previousFrame = time;
     if (motion) requestRender();
   }
   function resize() {
     if (disposed) return;
     const { width, height } = host.getBoundingClientRect();
     if (!width || !height) return;
+    const mobile = width < 600 && window.matchMedia("(pointer: coarse)").matches;
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, mobile ? 1.25 : 1.5);
+    if (width === renderWidth && height === renderHeight && pixelRatio === renderRatio)
+      return;
+    renderWidth = width;
+    renderHeight = height;
+    renderRatio = pixelRatio;
+    renderer.setPixelRatio(pixelRatio);
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     // Maintain the whole bracelet at narrow viewport ratios.
@@ -651,8 +697,7 @@ export function createWatchScene(
   function contextLost(event: Event) {
     event.preventDefault();
     active = false;
-    if (frame) cancelAnimationFrame(frame);
-    frame = 0;
+    cancelRender();
     onFailure();
   }
   renderer.domElement.addEventListener("pointerdown", pointerDown);
@@ -666,6 +711,8 @@ export function createWatchScene(
 
   return {
     setFinish(finish) {
+      if (finish === currentFinish) return;
+      currentFinish = finish;
       paintDial(finish);
       metal.color.set(FINISHES[finish].metal);
       polished.color.set(finish === "champagne" ? "#e5d3a7" : "#e4eaf4");
@@ -673,20 +720,17 @@ export function createWatchScene(
       requestRender();
     },
     setActive(value) {
+      if (active === value) return;
       active = value;
       lastTime = 0;
-      if (!active && frame) {
-        cancelAnimationFrame(frame);
-        frame = 0;
-      }
+      if (!active) cancelRender();
       if (active) requestRender();
     },
     setMotion(value) {
+      if (motion === value) return;
       motion = value;
-      if (!value && frame) {
-        cancelAnimationFrame(frame);
-        frame = 0;
-      }
+      lastTime = 0;
+      if (!value) cancelRender();
       requestRender();
     },
     setAutoRotate(value) {
@@ -718,7 +762,7 @@ export function createWatchScene(
     dispose() {
       if (disposed) return;
       disposed = true;
-      if (frame) cancelAnimationFrame(frame);
+      cancelRender();
       resizeObserver.disconnect();
       renderer.domElement.removeEventListener("pointerdown", pointerDown);
       renderer.domElement.removeEventListener("pointermove", pointerMove);

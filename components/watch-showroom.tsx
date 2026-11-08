@@ -34,6 +34,7 @@ const COPY = {
       "Interactive design study. Explore actual products in our collection.",
     drag: "Drag to explore",
     loading: "Preparing your perspective",
+    loadInteractive: "Explore in 3D",
     fallback: "A closer look, in every detail.",
     fallbackHint: "The interactive view is unavailable on this device.",
     live: "REAL-TIME 3D",
@@ -74,6 +75,7 @@ const COPY = {
       "Étude de design interactive. Retrouvez nos produits dans la collection.",
     drag: "Glissez pour explorer",
     loading: "Préparation de votre perspective",
+    loadInteractive: "Explorer en 3D",
     fallback: "Au plus près de chaque détail.",
     fallbackHint: "La vue interactive est indisponible sur cet appareil.",
     live: "3D EN TEMPS RÉEL",
@@ -113,6 +115,7 @@ const COPY = {
     study: "دراسة تصميم تفاعلية. اكتشف المنتجات الفعلية في مجموعتنا.",
     drag: "اسحب للاستكشاف",
     loading: "جارٍ تجهيز العرض",
+    loadInteractive: "استكشف بتقنية ثلاثية الأبعاد",
     fallback: "اكتشف جمال كل تفصيل.",
     fallbackHint: "العرض التفاعلي غير متاح على هذا الجهاز.",
     live: "عرض ثلاثي الأبعاد مباشر",
@@ -159,8 +162,9 @@ export default function WatchShowroom({
   const hostRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const sceneRef = useRef<WatchScene | null>(null);
+  const startSceneRef = useRef<(() => void) | null>(null);
   const [status, setStatus] = useState<
-    "idle" | "loading" | "ready" | "fallback"
+    "idle" | "deferred" | "loading" | "ready" | "fallback"
   >("idle");
   const [finish, setFinish] = useState<WatchFinish>("midnight");
   const [autoRotate, setAutoRotate] = useState(true);
@@ -170,9 +174,11 @@ export default function WatchShowroom({
   const autoRotateRef = useRef(autoRotate);
   const pausedRef = useRef(paused);
   const reducedRef = useRef(false);
-  finishRef.current = finish;
-  autoRotateRef.current = autoRotate;
-  pausedRef.current = paused;
+  useEffect(() => {
+    finishRef.current = finish;
+    autoRotateRef.current = autoRotate;
+    pausedRef.current = paused;
+  }, [finish, autoRotate, paused]);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -193,6 +199,12 @@ export default function WatchShowroom({
     let cancelled = false;
     let started = false;
     let visible = false;
+    const connection = (navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    }).connection;
+    // Keep photography usable without downloading WebGL on constrained networks.
+    const deferLoad = connection?.saveData ||
+      connection?.effectiveType === "slow-2g" || connection?.effectiveType === "2g";
     // Pausing stops the animation loop; direct controls still render one frame.
     const updateActivity = () =>
       sceneRef.current?.setActive(visible && !document.hidden);
@@ -221,26 +233,37 @@ export default function WatchShowroom({
         host.replaceChildren();
       }
     };
-    const loadObserver = new IntersectionObserver(
+    startSceneRef.current = () => void start();
+    const loadObserver = "IntersectionObserver" in window ? new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
-          void start();
-          loadObserver.disconnect();
+          if (deferLoad) setStatus("deferred");
+          else void start();
+          loadObserver?.disconnect();
         }
       },
       { rootMargin: "220px" },
-    );
-    const visibilityObserver = new IntersectionObserver((entries) => {
+    ) : null;
+    const visibilityObserver = "IntersectionObserver" in window ? new IntersectionObserver((entries) => {
       visible = entries.some((entry) => entry.isIntersecting);
       updateActivity();
-    });
-    loadObserver.observe(section);
-    visibilityObserver.observe(section);
+    }) : null;
+    // Observe the canvas itself: on mobile the details precede it by a full screen.
+    loadObserver?.observe(host);
+    visibilityObserver?.observe(host);
+    if (!loadObserver) {
+      visible = true;
+      if (deferLoad) queueMicrotask(() => {
+        if (!cancelled) setStatus("deferred");
+      });
+      else void start();
+    }
     document.addEventListener("visibilitychange", updateActivity);
     return () => {
       cancelled = true;
-      loadObserver.disconnect();
-      visibilityObserver.disconnect();
+      startSceneRef.current = null;
+      loadObserver?.disconnect();
+      visibilityObserver?.disconnect();
       document.removeEventListener("visibilitychange", updateActivity);
       sceneRef.current?.dispose();
       sceneRef.current = null;
@@ -255,8 +278,6 @@ export default function WatchShowroom({
   }, [autoRotate, reducedMotion]);
   useEffect(() => {
     sceneRef.current?.setMotion(!paused && !reducedMotion);
-    // A visibility event re-evaluates both the viewport and document state.
-    document.dispatchEvent(new Event("visibilitychange"));
   }, [paused, reducedMotion]);
 
   function chooseView(next: WatchView) {
@@ -383,6 +404,7 @@ export default function WatchShowroom({
             aria-label={copy.accessible}
             onKeyDown={keyboard}
             onPointerDown={() => {
+              if (status !== "ready") return;
               setView(null);
               setAutoRotate(false);
               sceneRef.current?.setAutoRotate(false);
@@ -406,11 +428,21 @@ export default function WatchShowroom({
                   width="640"
                   height="640"
                   loading="lazy"
+                  decoding="async"
                 />
                 <span className="atelier-load-status" role="status">
-                  {status === "fallback" ? copy.fallback : copy.loading}
+                  {status === "fallback" || status === "deferred" ? copy.fallback : copy.loading}
                 </span>
                 {status === "fallback" && <small>{copy.fallbackHint}</small>}
+                {status === "deferred" && (
+                  <button
+                    type="button"
+                    className="atelier-load-interactive"
+                    onClick={() => startSceneRef.current?.()}
+                  >
+                    {copy.loadInteractive}
+                  </button>
+                )}
               </div>
             )}
           </div>

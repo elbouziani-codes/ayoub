@@ -69,6 +69,9 @@
 .motion-suspended *, .motion-suspended *::before, .motion-suspended *::after {
   animation-play-state: paused !important;
 }
+.signature-marquee[data-motion-visible="false"] .marquee-track {
+  animation-play-state: paused;
+}
 [data-motion="paused"] *, [data-motion="paused"] *::before, [data-motion="paused"] *::after {
   animation: none !important;
   transition: none !important;

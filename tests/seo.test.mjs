@@ -22,7 +22,8 @@ const graph = (html) => [...html.matchAll(/<script\b[^>]*type="application\/ld\+
   const data = JSON.parse(text);
   return data["@graph"] || [data];
 });
-async function request(path, locale) {
+// Keep the English fixtures explicit, independent of the store's default locale.
+async function request(path, locale = "en") {
   const response = await fetch(new URL(path, base), { headers: locale ? { Cookie: `ayoub-language=${locale}` } : {}, signal: AbortSignal.timeout(30000) });
   const html = await response.text();
   return { response, html };

@@ -10,6 +10,49 @@ import "./store-motion.css";
 
 type TiltSurfaceProps = HTMLAttributes<HTMLElement> & { disabled?: boolean };
 
+// A product grid shares its environment listeners instead of registering five
+// window/document listeners for every card.
+const environmentSubscribers = new Set<() => void>();
+let environmentEnabled = false;
+let layoutVersion = 0;
+let stopEnvironment: (() => void) | null = null;
+
+function subscribeEnvironment(subscriber: () => void) {
+  if (!stopEnvironment) {
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const fine = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const sync = () => {
+      environmentEnabled = !reduced.matches && fine.matches && !document.hidden;
+      for (const notify of environmentSubscribers) notify();
+    };
+    const invalidate = () => {
+      layoutVersion++;
+    };
+    reduced.addEventListener("change", sync);
+    fine.addEventListener("change", sync);
+    document.addEventListener("visibilitychange", sync);
+    window.addEventListener("scroll", invalidate, { passive: true });
+    window.addEventListener("resize", invalidate, { passive: true });
+    stopEnvironment = () => {
+      reduced.removeEventListener("change", sync);
+      fine.removeEventListener("change", sync);
+      document.removeEventListener("visibilitychange", sync);
+      window.removeEventListener("scroll", invalidate);
+      window.removeEventListener("resize", invalidate);
+    };
+    sync();
+  }
+  environmentSubscribers.add(subscriber);
+  subscriber();
+  return () => {
+    environmentSubscribers.delete(subscriber);
+    if (!environmentSubscribers.size) {
+      stopEnvironment?.();
+      stopEnvironment = null;
+    }
+  };
+}
+
 /** Small, mouse-only depth cues; touch and keyboard retain a stationary surface. */
 export default function TiltSurface({
   children,
@@ -24,6 +67,7 @@ export default function TiltSurface({
   const enabled = useRef(false);
   const frame = useRef(0);
   const bounds = useRef<DOMRect | null>(null);
+  const boundsVersion = useRef(-1);
   const pointer = useRef({ x: 0, y: 0 });
 
   const reset = () => {
@@ -40,30 +84,17 @@ export default function TiltSurface({
   };
 
   useEffect(() => {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const fine = window.matchMedia("(hover: hover) and (pointer: fine)");
-    const sync = () => {
-      enabled.current = !disabled && !reduced.matches && fine.matches;
+    if (disabled) {
+      enabled.current = false;
+      reset();
+      return;
+    }
+    const unsubscribe = subscribeEnvironment(() => {
+      enabled.current = environmentEnabled;
       if (!enabled.current) reset();
-    };
-    const hide = () => {
-      if (document.hidden) reset();
-    };
-    const invalidateBounds = () => {
-      bounds.current = null;
-    };
-    sync();
-    reduced.addEventListener("change", sync);
-    fine.addEventListener("change", sync);
-    document.addEventListener("visibilitychange", hide);
-    window.addEventListener("scroll", invalidateBounds, { passive: true });
-    window.addEventListener("resize", invalidateBounds, { passive: true });
+    });
     return () => {
-      reduced.removeEventListener("change", sync);
-      fine.removeEventListener("change", sync);
-      document.removeEventListener("visibilitychange", hide);
-      window.removeEventListener("scroll", invalidateBounds);
-      window.removeEventListener("resize", invalidateBounds);
+      unsubscribe();
       reset();
     };
   }, [disabled]);
@@ -83,7 +114,10 @@ export default function TiltSurface({
     if (frame.current) return;
     frame.current = requestAnimationFrame(() => {
       frame.current = 0;
-      bounds.current ||= element.getBoundingClientRect();
+      if (!bounds.current || boundsVersion.current !== layoutVersion) {
+        bounds.current = element.getBoundingClientRect();
+        boundsVersion.current = layoutVersion;
+      }
       const rect = bounds.current;
       const x = Math.max(
         0,

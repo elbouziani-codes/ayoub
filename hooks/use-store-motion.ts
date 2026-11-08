@@ -16,6 +16,7 @@ export function useStoreMotion(
       "(hover: hover) and (pointer: fine)",
     );
     let revealObserver: IntersectionObserver | null = null;
+    let marqueeObserver: IntersectionObserver | null = null;
     let frame = 0;
     let heroFrame = 0;
     let activeHero: HTMLElement | null = null;
@@ -23,6 +24,10 @@ export function useStoreMotion(
     let heroY = 0;
     let heroBounds: DOMRect | null = null;
     const heroes = new Set<HTMLElement>();
+    const marquees = new Set<HTMLElement>();
+    let measureScroll = true;
+    let scrollable = 0;
+    let lastProgress = "";
 
     const motionAllowed = () => !paused && !reducedMotion.matches;
 
@@ -43,20 +48,23 @@ export function useStoreMotion(
     };
 
     const discover = (node: HTMLElement) => {
-      if (node.matches("[data-reveal]")) observeElement(node);
-      node
-        .querySelectorAll<HTMLElement>("[data-reveal]")
-        .forEach(observeElement);
-      const attachHero = (hero: HTMLElement) => {
-        if (heroes.has(hero)) return;
-        heroes.add(hero);
-        hero.addEventListener("pointermove", moveHero, { passive: true });
-        hero.addEventListener("pointerleave", resetHero, { passive: true });
+      const attach = (element: HTMLElement) => {
+        if (element.matches("[data-reveal]")) observeElement(element);
+        if (element.matches(".hero-interactive") && !heroes.has(element)) {
+          heroes.add(element);
+          element.addEventListener("pointermove", moveHero, { passive: true });
+          element.addEventListener("pointerleave", resetHero, { passive: true });
+        }
+        if (element.matches(".signature-marquee") && !marquees.has(element)) {
+          marquees.add(element);
+          element.dataset.motionVisible = marqueeObserver ? "false" : "true";
+          marqueeObserver?.observe(element);
+        }
       };
-      if (node.matches(".hero-interactive")) attachHero(node);
+      attach(node);
       node
-        .querySelectorAll<HTMLElement>(".hero-interactive")
-        .forEach(attachHero);
+        .querySelectorAll<HTMLElement>("[data-reveal], .hero-interactive, .signature-marquee")
+        .forEach(attach);
     };
 
     const resetHero = () => {
@@ -92,14 +100,21 @@ export function useStoreMotion(
     const updateScroll = () => {
       frame = 0;
       const scrollTop = window.scrollY;
-      const scrollable =
-        document.documentElement.scrollHeight - window.innerHeight;
+      if (measureScroll) {
+        scrollable = document.documentElement.scrollHeight - window.innerHeight;
+        measureScroll = false;
+      }
       const progress =
         scrollable > 0
           ? Math.min(100, Math.max(0, (scrollTop / scrollable) * 100))
           : 0;
-      root.style.setProperty("--scroll-progress", `${progress.toFixed(2)}%`);
-      root.dataset.scrolled = scrollTop > 24 ? "true" : "false";
+      const nextProgress = `${progress.toFixed(2)}%`;
+      if (lastProgress !== nextProgress) {
+        root.style.setProperty("--scroll-progress", nextProgress);
+        lastProgress = nextProgress;
+      }
+      const scrolled = scrollTop > 24 ? "true" : "false";
+      if (root.dataset.scrolled !== scrolled) root.dataset.scrolled = scrolled;
       // A page scroll changes the hero's viewport coordinates.
       heroBounds = null;
     };
@@ -107,6 +122,10 @@ export function useStoreMotion(
     const queueScroll = () => {
       if (!frame && !document.hidden)
         frame = requestAnimationFrame(updateScroll);
+    };
+    const queueMeasure = () => {
+      measureScroll = true;
+      queueScroll();
     };
 
     const moveHero = (event: PointerEvent) => {
@@ -161,26 +180,48 @@ export function useStoreMotion(
         if (frame) cancelAnimationFrame(frame);
         frame = 0;
         resetHero();
-      } else queueScroll();
+      } else queueMeasure();
     };
 
+    if ("IntersectionObserver" in window) {
+      marqueeObserver = new IntersectionObserver((entries) => {
+        for (const entry of entries)
+          (entry.target as HTMLElement).dataset.motionVisible = entry.isIntersecting ? "true" : "false";
+      });
+    }
     configureMotion();
     updateScroll();
     const mutations = new MutationObserver((records) => {
+      let removed = false;
       for (const record of records) {
+        removed ||= record.removedNodes.length > 0;
         for (const node of record.addedNodes) {
           if (node instanceof HTMLElement) discover(node);
         }
       }
-      queueScroll();
+      if (removed) {
+        for (const hero of heroes) {
+          if (root.contains(hero)) continue;
+          hero.removeEventListener("pointermove", moveHero);
+          hero.removeEventListener("pointerleave", resetHero);
+          heroes.delete(hero);
+          if (activeHero === hero) resetHero();
+        }
+        for (const marquee of marquees) {
+          if (root.contains(marquee)) continue;
+          marqueeObserver?.unobserve(marquee);
+          marquees.delete(marquee);
+        }
+      }
+      queueMeasure();
     });
     // Only added subtrees are scanned, never the complete product grid per update.
     mutations.observe(root, { childList: true, subtree: true });
     const resizeObserver =
-      "ResizeObserver" in window ? new ResizeObserver(queueScroll) : null;
+      "ResizeObserver" in window ? new ResizeObserver(queueMeasure) : null;
     resizeObserver?.observe(root);
     window.addEventListener("scroll", queueScroll, { passive: true });
-    window.addEventListener("resize", queueScroll, { passive: true });
+    window.addEventListener("resize", queueMeasure, { passive: true });
     document.addEventListener("visibilitychange", visibility);
     // Pointer listeners are installed only on the interactive hero surfaces.
     reducedMotion.addEventListener("change", configureMotion);
@@ -188,12 +229,13 @@ export function useStoreMotion(
 
     return () => {
       revealObserver?.disconnect();
+      marqueeObserver?.disconnect();
       mutations.disconnect();
       resizeObserver?.disconnect();
       if (frame) cancelAnimationFrame(frame);
       resetHero();
       window.removeEventListener("scroll", queueScroll);
-      window.removeEventListener("resize", queueScroll);
+      window.removeEventListener("resize", queueMeasure);
       document.removeEventListener("visibilitychange", visibility);
       for (const hero of heroes) {
         hero.removeEventListener("pointermove", moveHero);

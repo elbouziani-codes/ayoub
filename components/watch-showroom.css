@@ -49,6 +49,8 @@
 .atelier-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
 .atelier-fallback img { width: 80%; height: 80%; object-fit: contain; mix-blend-mode: screen; opacity: .9; filter: drop-shadow(0 20px 25px #0007); }
 .atelier-load-status { font-size: 9px; color: #9daecb; margin-top: -10px; }
+.atelier-load-interactive { margin-top: 12px; min-height: 40px; padding: 0 16px; border: 1px solid #809bdc60; border-radius: 7px; color: #dbe8ff; background: #101b2b; font-size: 11px; pointer-events: auto; }
+.atelier-load-interactive:hover { background: #1a2b46; }
 .atelier-fallback small { max-width: 220px; margin-top: 5px; text-align: center; font-size: 8px; color: #7384a2; }
 .atelier-material-label { position: absolute; left: 0; bottom: 139px; display: flex; align-items: center; gap: 12px; pointer-events: none; z-index: 2; }
 .atelier-material-label > span { width: 35px; height: 1px; background: linear-gradient(90deg, transparent, #6381af77); }

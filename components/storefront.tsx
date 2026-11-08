@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   useMemo,
+  useDeferredValue,
   type ReactNode,
   type FormEvent,
 } from "react";
@@ -41,7 +42,7 @@ import {
 } from "lucide-react";
 import { SUPPORT_URL } from "@/lib/shop-config";
 import { productImageSet, productThumbnail } from "@/lib/product-images";
-import LiquidGlass from "./liquid-glass";
+import HeroWatch from "./hero-watch";
 import WatchShowroom from "./watch-showroom";
 import TiltSurface from "./tilt-surface";
 import { useStoreMotion } from "@/hooks/use-store-motion";
@@ -220,7 +221,7 @@ export default function Storefront({
   const rootRef = useRef<HTMLDivElement>(null);
   const [motionPaused, setMotionPaused] = useState(false);
   useStoreMotion(rootRef, motionPaused);
-  const d = localizedDictionary(locale, contentOverrides);
+  const d = useMemo(() => localizedDictionary(locale, contentOverrides), [locale, contentOverrides]);
   const t = (k: TranslationKey) => d[k];
   const [products, setProducts] = useState(initialProducts);
   const [catalogError, setCatalogError] = useState(catalogUnavailable);
@@ -235,7 +236,6 @@ export default function Storefront({
   );
   const [imageIndex, setImageIndex] = useState(0);
   const [detailQty, setDetailQty] = useState(1);
-  const [heroIndex, setHeroIndex] = useState(0);
   const [mobileNav, setMobileNav] = useState(false);
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState("featured");
@@ -246,6 +246,7 @@ export default function Storefront({
   const [savedOnly, setSavedOnly] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [busy, setBusy] = useState(false);
@@ -499,25 +500,14 @@ export default function Storefront({
     showAll || category !== "All" || savedOnly || showFilters
       ? filtered
       : filtered.slice(0, 4);
-  const searchResults = products
-    .filter((p) =>
+  const searchResults = useMemo(() => {
+    if (overlay !== "search") return [];
+    const search = deferredQuery.toLowerCase().trim();
+    return products.filter((p) =>
       `${p.name} ${p.nameFr} ${p.nameAr} ${p.category} ${p.color} ${p.subtitle} ${p.localizedDetails?.fr.color ?? ""} ${p.localizedDetails?.ar.color ?? ""}`
-        .toLowerCase()
-        .includes(query.toLowerCase().trim()),
-    )
-    .slice(0, 8);
-  const heroProducts = products.filter((p) => p.featured);
-  const heroCount = heroProducts.length;
-  useEffect(() => {
-    if (heroCount < 2) return;
-    const timer = window.setInterval(() => {
-      if (motionPaused || overlay || document.hidden || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-      setHeroIndex((index) => (index + 1) % heroCount);
-    }, 6500);
-    return () => window.clearInterval(timer);
-  }, [heroCount, motionPaused, overlay]);
-  const currentHeroIndex = heroProducts.length ? heroIndex % heroProducts.length : 0;
-  const hero = heroProducts[currentHeroIndex] || products[0];
+        .toLowerCase().includes(search),
+    ).slice(0, 8);
+  }, [products, overlay, deferredQuery]);
   const money = (n: number) => formatMoney(n, locale);
   const currency = locale === "ar" ? "درهم" : "MAD";
   const HeroHeading = initialProduct ? "h2" : "h1";
@@ -801,73 +791,13 @@ export default function Storefront({
               </button>
             </div>
           </div>
-          <div className="hero-visual hero-interactive">
-            <div className="hero-aura" />
-            <div className="orbit" />
-            <div className="hero-orbit-ring" aria-hidden="true" />
-            <div className="hero-spec">
-              {t("precision")}
-              <strong>
-                {hero ? productDetail(hero, locale, "caseSize") : "42 mm"} · {t("steel")}
-              </strong>
-            </div>
-            <div className="hero-watch-stage">
-              <img
-                key={hero?.id || "hero"}
-                className="hero-watch"
-                src={hero?.images[0] || "/images/watch-hero.webp"}
-                srcSet={productImageSet(
-                  hero?.images[0] || "/images/watch-hero.webp",
-                )}
-                sizes="(max-width: 760px) 400px, (max-width: 1100px) 500px, 640px"
-                alt={
-                  hero
-                    ? productName(hero, locale)
-                    : "Silver and black chronograph watch"
-                }
-                fetchPriority="high"
-                width="1254"
-                height="1254"
-              />
-              <div className="hero-glint" aria-hidden="true" />
-            </div>
-            <div className="hero-index">
-              <b>{String(currentHeroIndex + 1).padStart(2, "0")}</b>
-              <i />{String(Math.max(heroCount, 1)).padStart(2, "0")}
-            </div>
-            {hero && (
-              <LiquidGlass key={hero.id} className="floating-product glass">
-                <div>
-                  <div className="eyebrow">{t("featured")}</div>
-                  <h3>{productName(hero, locale)}</h3>
-                  <p>
-                    {money(hero.price)} <span>{currency}</span>
-                  </p>
-                </div>
-                <button
-                  onClick={() => selectProduct(hero)}
-                  aria-label={`${t("productDetails")}: ${productName(hero, locale)}`}
-                >
-                  <ArrowUpRight />
-                </button>
-              </LiquidGlass>
-            )}
-            <div
-              className="hero-slides"
-              role="group"
-              aria-label={t("collections")}
-            >
-              {heroProducts.map((p, i) => (
-                <button
-                  key={p.id}
-                  aria-label={productName(p, locale)}
-                  aria-pressed={currentHeroIndex === i}
-                  className={currentHeroIndex === i ? "active" : ""}
-                  onClick={() => setHeroIndex(i)}
-                />
-              ))}
-            </div>
-          </div>
+          <HeroWatch
+            products={products}
+            locale={locale}
+            copy={d}
+            paused={motionPaused || Boolean(overlay)}
+            onSelect={selectProduct}
+          />
           <a className="hero-scroll" href="#collection">
             <ArrowDown />
             {t("discover")}
@@ -1099,6 +1029,7 @@ export default function Storefront({
                       width="350"
                       height="350"
                       loading="lazy"
+                      decoding="async"
                     />
                     <span className="product-preview-link">
                       {t("exploreDetails")}
@@ -1178,11 +1109,12 @@ export default function Storefront({
               <img
                 src={editorialAsset.image}
                 srcSet={productImageSet(editorialAsset.image)}
-                sizes="(max-width: 760px) calc(100vw - 36px), 700px"
+                sizes="(max-width: 440px) 450px, (max-width: 760px) 480px, 555px"
                 alt={editorialAsset[locale]}
                 width="700"
                 height="700"
                 loading="lazy"
+                decoding="async"
               />
               <div className="editorial-caption">
                 <div className="eyebrow">{t("editorialTag")}</div>
@@ -1458,7 +1390,8 @@ export default function Storefront({
                   srcSet={productImageSet(
                     selected.images[imageIndex] || "/images/watch-hero.webp",
                   )}
-                  sizes="(max-width: 760px) calc(100vw - 70px), 450px"
+                  sizes="(max-width: 760px) 255px, 340px"
+                  fetchPriority="high"
                   alt={productName(selected, locale)}
                   width="500"
                   height="500"
@@ -1973,7 +1906,7 @@ export default function Storefront({
           </div>
           <p className="search-hint">{t("searchHint")}</p>
           <p className="search-shortcut">{t("searchShortcut")}</p>
-          <div className="search-results">
+          <div className="search-results" aria-busy={query !== deferredQuery}>
             {searchResults.map((p) => (
               <button
                 className="search-hit"

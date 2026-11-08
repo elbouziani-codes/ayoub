@@ -653,7 +653,10 @@ export const productDescription = (p: Product, l: Locale) =>
       : p.description;
 export const productDetail = (p: Product, l: Locale, field: keyof ProductDetails) =>
   l === "en" ? p[field] ?? "" : p.localizedDetails?.[l]?.[field] || p[field] || "";
+const moneyFormatters: Record<Locale, Intl.NumberFormat> = {
+  en: new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 }),
+  fr: new Intl.NumberFormat("fr-MA", { maximumFractionDigits: 0 }),
+  ar: new Intl.NumberFormat("ar-MA", { maximumFractionDigits: 0 }),
+};
 export const formatMoney = (value: number, l: Locale = "fr") =>
-  new Intl.NumberFormat(l === "ar" ? "ar-MA" : l === "fr" ? "fr-MA" : "en-GB", {
-    maximumFractionDigits: 0,
-  }).format(value);
+  moneyFormatters[l].format(value);

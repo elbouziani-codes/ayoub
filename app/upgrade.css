@@ -704,3 +704,30 @@
 @media(max-width:600px){.toast-stack{max-width:calc(100vw - 30px);width:max-content;font-size:11px}.toast-stack button{font-size:9px;margin-inline-start:3px;padding:6px 8px}}
 .storefront .nav-links .nav-showroom{display:inline-flex;align-items:center;gap:6px}
 @media(min-width:761px) and (max-width:980px){.storefront .hero .hero-title{font-size:58px;letter-spacing:-.065em}.storefront .hero .hero-title span{white-space:nowrap}}
+
+/* Suspend work outside the viewport and keep scrolling inexpensive on phones. */
+.hero:has([data-hero-active='false']) *,
+.hero:has([data-hero-active='false']) *::before,
+.hero:has([data-hero-active='false']) *::after {
+  animation-play-state: paused !important;
+}
+.hero-visual[data-hero-active='false'] .hero-watch-stage { will-change: auto; }
+.hexops-float { animation: none; }
+@media (max-width: 760px), (pointer: coarse) {
+  .storefront .nav-header {
+    background: #080c16f5;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .storefront .mobile-shopbar {
+    background: #142137fa;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .storefront .modal-backdrop {
+    background: #030812ed;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .storefront .hero-watch { filter: drop-shadow(2px 20px 14px #0008); }
+}
