@@ -1,0 +1,5 @@
+{
+  "debugPortAddress": "127.0.0.1:33721",
+  "defaultEntrypointService": "core:user:__vite_proxy_worker__",
+  "userWorkerService": "core:user:ayoub-shop"
+}
