@@ -100,7 +100,7 @@ const hexopsCredit = {
 
 function Brand() {
   return (
-    <a href="/" className="brand" aria-label="Ayoub Shop home">
+    <a href="/" className="brand">
       <span className="brand-mark">
         <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
           <path
@@ -126,12 +126,16 @@ function Modal({
   onClose,
   className = "",
   closeLabel = "Close",
+  titleAs: Title = "h2",
+  labelledBy = "modal-title",
 }: {
   children: ReactNode;
   title?: ReactNode;
   onClose: () => void;
   className?: string;
   closeLabel?: string;
+  titleAs?: "h2" | "p";
+  labelledBy?: string;
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
@@ -183,11 +187,11 @@ function Modal({
         ref={panel}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="modal-title"
+        aria-labelledby={labelledBy}
         className={`modal ${className}`}
       >
         <div className="modal-header">
-          <h2 id="modal-title">{title || "Ayoub Shop"}</h2>
+          <Title id="modal-title" className="modal-title">{title || "Ayoub Shop"}</Title>
           <button
             className="icon-button"
             aria-label={closeLabel}
@@ -1118,7 +1122,7 @@ export default function Storefront({
               />
               <div className="editorial-caption">
                 <div className="eyebrow">{t("editorialTag")}</div>
-                <h3>
+                <h2>
                   {t("editorialTitle")
                     .split("\n")
                     .map((line, i) => (
@@ -1127,7 +1131,7 @@ export default function Storefront({
                         {i === 0 && <br />}
                       </span>
                     ))}
-                </h3>
+                </h2>
                 <button className="text-link" onClick={() => browse("Sport")}>
                   {t("editorialLink")}
                   <ArrowUpRight />
@@ -1147,7 +1151,8 @@ export default function Storefront({
               </button>
             </div>
           </section>
-          <section className="values" data-reveal>
+          <section className="values" aria-labelledby="values-title" data-reveal>
+            <h2 id="values-title" className="sr-only">{t("thoughtful")}</h2>
             {[
               [Watch, "value1", "value1Desc"],
               [Gem, "value2", "value2Desc"],
@@ -1195,7 +1200,7 @@ export default function Storefront({
               <p>{t("footerDesc")}</p>
             </div>
             <div>
-              <h4>{t("shop")}</h4>
+              <h2>{t("shop")}</h2>
               <div className="footer-links">
                 <button onClick={() => browse()}>{t("all")}</button>
                 <button onClick={() => browse("Classic")}>
@@ -1208,7 +1213,7 @@ export default function Storefront({
               </div>
             </div>
             <div>
-              <h4>{t("help")}</h4>
+              <h2>{t("help")}</h2>
               <div className="footer-links">
                 <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
                   {t("contact")}
@@ -1222,7 +1227,7 @@ export default function Storefront({
               </div>
             </div>
             <div className="footer-delivery">
-              <h4>{t("morocco")}</h4>
+              <h2>{t("morocco")}</h2>
               <p>{t("deliveryText")}</p>
               <span className="cod-pill">
                 <Banknote />
@@ -1235,7 +1240,7 @@ export default function Storefront({
               © {new Date().getFullYear()} {t("copyright")}
             </p>
             <a className="hexops-credit" href="https://hexops.pro" target="_blank" rel="noopener noreferrer" aria-label={`${hexopsCredit[locale].label} HexOps — ${hexopsCredit[locale].visit}`}>
-              <Image src="/images/hexops-icon.ico" alt="" width={25} height={25} unoptimized />
+              <Image src="/images/hexops-icon.ico" alt="" width={20} height={20} unoptimized />
               <span>{hexopsCredit[locale].label} <strong>HexOps</strong></span>
               <ArrowUpRight size={13} aria-hidden="true" />
             </a>
@@ -1250,7 +1255,7 @@ export default function Storefront({
         </div>
       </footer>
       <a className="hexops-float" href="https://hexops.pro" target="_blank" rel="noopener noreferrer" aria-label={hexopsCredit[locale].visit} title="HexOps" inert={overlay ? true : undefined}>
-        <Image src="/images/hexops-icon.ico" alt="" width={27} height={27} unoptimized />
+        <Image src="/images/hexops-icon.ico" alt="" width={20} height={20} unoptimized />
       </a>
 
       {overlay === "cart" && (
@@ -1381,6 +1386,8 @@ export default function Storefront({
           onClose={close}
           className="product-modal"
           closeLabel={t("close")}
+          titleAs="p"
+          labelledBy="detail-product-title"
         >
           <div className="product-detail">
             <div>
@@ -1422,7 +1429,7 @@ export default function Storefront({
                 <span className="blue-dot" />
                 {t(selected.category)}
               </div>
-              <ProductHeading className="detail-product-title">
+              <ProductHeading id="detail-product-title" className="detail-product-title">
                 {productName(selected, locale)}
               </ProductHeading>
               <p className="product-subtitle">

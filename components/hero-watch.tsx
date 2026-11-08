@@ -82,7 +82,7 @@ export default function HeroWatch({ products, locale, copy, paused, onSelect }: 
         <LiquidGlass key={hero.id} className="floating-product glass">
           <div>
             <div className="eyebrow">{copy.featured}</div>
-            <h3>{productName(hero, locale)}</h3>
+            <h2>{productName(hero, locale)}</h2>
             <p>{formatMoney(hero.price, locale)} <span>{locale === "ar" ? "درهم" : "MAD"}</span></p>
           </div>
           <button onClick={() => onSelect(hero)} aria-label={`${copy.productDetails}: ${productName(hero, locale)}`}>

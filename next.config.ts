@@ -8,6 +8,9 @@ const netlifySiteUrl = process.env.NEXT_PUBLIC_SITE_URL
   || process.env.DEPLOY_PRIME_URL;
 
 const nextConfig: NextConfig = {
+  // Deliver descriptions, canonical URLs and social metadata in the initial
+  // <head> for every client, including browsers without metadata streaming.
+  htmlLimitedBots: /.*/,
   // Vinext inspects multipart requests before dispatching route handlers.
   // Allow multipart overhead; the upload route independently enforces 5 MiB.
   experimental: { serverActions: { bodySizeLimit: "6mb" } },

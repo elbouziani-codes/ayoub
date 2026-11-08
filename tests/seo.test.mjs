@@ -12,9 +12,10 @@ const decode = (value = "") => value.replace(/&(?:amp|quot|apos|lt|gt|#(\d+)|#x(
 });
 const attributes = (tag) => Object.fromEntries([...tag.matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)].map((match) => [match[1].toLowerCase(), decode(match[2] ?? match[3])]));
 const tags = (html, name) => [...html.matchAll(new RegExp(`<${name}\\b[^>]*>`, "gi"))].map(([tag]) => attributes(tag));
-const metadata = (html, name) => tags(html, "meta").find((tag) => tag.name === name || tag.property === name)?.content;
+const documentHead = (html) => html.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i)?.[1] || "";
+const metadata = (html, name) => tags(documentHead(html), "meta").find((tag) => tag.name === name || tag.property === name)?.content;
 const canonical = (html) => {
-  const values = tags(html, "link").filter((tag) => tag.rel === "canonical");
+  const values = tags(documentHead(html), "link").filter((tag) => tag.rel === "canonical");
   assert.equal(values.length, 1, "Exactly one canonical URL must be rendered");
   return new URL(values[0].href).href;
 };
@@ -23,8 +24,9 @@ const graph = (html) => [...html.matchAll(/<script\b[^>]*type="application\/ld\+
   return data["@graph"] || [data];
 });
 // Keep the English fixtures explicit, independent of the store's default locale.
-async function request(path, locale = "en") {
-  const response = await fetch(new URL(path, base), { headers: locale ? { Cookie: `ayoub-language=${locale}` } : {}, signal: AbortSignal.timeout(30000) });
+const browserUserAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+async function request(path, locale = "en", userAgent = browserUserAgent) {
+  const response = await fetch(new URL(path, base), { headers: { "User-Agent": userAgent, ...(locale ? { Cookie: `ayoub-language=${locale}` } : {}) }, signal: AbortSignal.timeout(30000) });
   const html = await response.text();
   return { response, html };
 }
@@ -47,6 +49,17 @@ await check("Homepage renders one canonical, descriptive title, and server metad
   assert.equal(metadata(home.html, "og:image:height"), "1100");
   assert.equal(tags(home.html, "html")[0]?.lang, "en");
 });
+await check("Browsers and Lighthouse receive one localized description in the initial HTML head", async () => {
+  for (const userAgent of [browserUserAgent, `${browserUserAgent} Chrome-Lighthouse`]) {
+    for (const locale of ["en", "fr", "ar"]) {
+      const { html } = await request("/", locale, userAgent);
+      const descriptions = tags(documentHead(html), "meta").filter((tag) => tag.name === "description");
+      assert.equal(descriptions.length, 1);
+      assert.ok(descriptions[0].content?.length > 70);
+      assert.equal(tags(html, "html")[0]?.lang, locale);
+    }
+  }
+});
 await check("Business identity and visible catalog are available without executing JavaScript", () => {
   const data = graph(home.html);
   const organization = data.find((item) => item["@type"] === "OnlineStore");
@@ -55,6 +68,15 @@ await check("Business identity and visible catalog are available without executi
   assert.equal(organization.contactPoint.telephone, "+212789948216");
   assert.ok(data.some((item) => item["@type"] === "WebSite"));
   assert.ok(data.some((item) => item["@type"] === "CollectionPage"));
+});
+await check("Homepage headings begin with one h1 and do not skip heading levels", () => {
+  const markup = home.html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+  const levels = [...markup.matchAll(/<h([1-6])\b[^>]*>/gi)].map((match) => Number(match[1]));
+  assert.equal(levels[0], 1);
+  assert.equal(levels.filter((level) => level === 1).length, 1);
+  for (let index = 1; index < levels.length; index++) {
+    assert.ok(levels[index] <= levels[index - 1] + 1, `Heading skips from h${levels[index - 1]} to h${levels[index]}`);
+  }
 });
 
 const catalog = await request("/api/products");

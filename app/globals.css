@@ -183,7 +183,7 @@ textarea { resize: vertical; min-height: 95px; }
 .hero-caption::before { content: ''; height: 40px; width: 1px; background: #5e7aa13d; }
 .floating-product { position: absolute; z-index: 5; left: 1px; bottom: 56px; width: 257px; border-radius: 12px; padding: 16px 17px; background: linear-gradient(135deg, #19202bd9, #0e121bc4); border: 1px solid #ffffff16; backdrop-filter: blur(22px); box-shadow: 0 14px 45px #0004, inset 0 1px 0 #ffffff05; }
 .floating-product > span { display: block; color: #8d9bb2; font-size: 8px; letter-spacing: 1.9px; text-transform: uppercase; margin-bottom: 5px; }
-.floating-product h3 { color: #e5eaf4; font-size: 13px; font-weight: 500; }
+.floating-product h2 { color: #e5eaf4; font-size: 13px; font-weight: 500; }
 .floating-product p { font-size: 10px; color: #8390a8; margin-top: 3px; }
 .floating-product > div { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid #ffffff0e; }
 .floating-product strong { color: #dfe7f7; font-size: 13px; font-weight: 550; }
@@ -301,7 +301,7 @@ textarea { resize: vertical; min-height: 95px; }
 .modal-close:hover, .close-modal:hover { color: #fff; background: #ffffff13; }
 .modal-close svg, .close-modal svg { width: 16px; height: 16px; }
 .modal-header, .drawer-header { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding-bottom: 22px; margin-bottom: 22px; border-bottom: 1px solid #ffffff10; }
-.modal-header h2, .drawer-header h2 { font-size: 23px; font-weight: 550; letter-spacing: -.7px; }
+.modal-header .modal-title, .drawer-header h2 { font-size: 23px; font-weight: 550; letter-spacing: -.7px; }
 .modal-header p { color: #7e8aa1; font-size: 12px; margin-top: 6px; }
 .drawer-backdrop { justify-content: flex-end; padding: 0; }
 .drawer { position: relative; width: min(470px,100%); height: 100dvh; max-height: 100dvh; overflow: auto; background: linear-gradient(130deg,#151b28,#0d111a 70%); border-left: 1px solid #ffffff1c; padding: 29px; box-shadow: -30px 0 100px #0007; animation: drawer-in .28s var(--ease); }
@@ -521,7 +521,7 @@ textarea { resize: vertical; min-height: 95px; }
   .hero-watch,.hero-visual > img { width: 435px; height: 435px; max-width: 118%; transform: rotate(-18deg); margin-top: -6px; margin-left: 22px; }
   .hero-aura,.watch-glow { width: 400px; height: 400px; }
   .floating-product { bottom: 22px; left: 0; width: 210px; padding: 13px 14px; }
-  .floating-product h3 { font-size: 12px; }
+  .floating-product h2 { font-size: 12px; }
   .floating-product > span { font-size: 7px; }
   .floating-product > div { margin-top: 9px; padding-top: 8px; }
   .hero-caption { top: 40px; right: 1px; font-size: 7px; }
@@ -601,7 +601,7 @@ textarea { resize: vertical; min-height: 95px; }
   .modal-backdrop,.overlay { padding: 15px; }
   .modal { max-height: calc(100dvh - 30px); border-radius: 14px; padding: 24px; }
   .modal-header { padding-bottom: 18px; margin-bottom: 20px; padding-right: 22px; }
-  .modal-header h2 { font-size: 21px; }
+  .modal-header .modal-title { font-size: 21px; }
   .modal-header p { font-size: 11px; }
   .drawer-backdrop { padding: 0; }
   .drawer { padding: 23px; width: min(450px,100%); }
@@ -729,7 +729,7 @@ textarea { resize: vertical; min-height: 95px; }
 .floating-product { left: auto; right: -4px; bottom: 72px; width: 229px; padding: 15px 16px; display: flex; gap: 15px; align-items: center; justify-content: space-between; }
 .floating-product > div { display: block; flex: 1; margin: 0; padding: 0; border: 0; }
 .floating-product .eyebrow { color: #7b8eae; font-size: 6px; letter-spacing: 1.5px; margin-bottom: 5px; }
-.floating-product h3 { color: #dfe7f7; font-size: 11px; font-weight: 450; }
+.floating-product h2 { color: #dfe7f7; font-size: 11px; font-weight: 450; }
 .floating-product p { margin-top: 6px; color: #c5d5ef; font-size: 11px; }
 .floating-product p span { color: #7586a4; font-size: 8px; margin-left: 2px; }
 .floating-product > button { width: 31px; height: 31px; padding: 0; }
@@ -791,7 +791,7 @@ textarea { resize: vertical; min-height: 95px; }
 .editorial-image::after { background: linear-gradient(90deg,#080e17ba,transparent 95%),linear-gradient(0deg,#070d17a1,transparent 70%); }
 .editorial-caption { position: absolute; z-index: 3; bottom: 32px; left: 31px; }
 .editorial-caption .eyebrow { font-size: 7px; color: #8b9fc0; letter-spacing: 1.5px; }
-.editorial-caption h3 { color: #e8edf8; font-size: 30px; line-height: 1.23; font-weight: 500; letter-spacing: -1px; margin-top: 12px; }
+.editorial-caption h2 { color: #e8edf8; font-size: 30px; line-height: 1.23; font-weight: 500; letter-spacing: -1px; margin-top: 12px; }
 .editorial-caption .text-link { font-size: 9px; margin-top: 20px; color: #a5b9db; }
 .story { padding-right: 28px; scroll-margin-top: 40px; }
 .story .eyebrow { display: flex; align-items: center; gap: 7px; font-size: 8px; }
@@ -817,7 +817,7 @@ textarea { resize: vertical; min-height: 95px; }
 .footer-about .brand-type { font-size: 14px; }
 .footer-about .brand-type small { font-size: 4px; margin-top: 5px; }
 .footer-about > p { color: #5b6c87; font-size: 10px; line-height: 1.95; max-width: 230px; margin-top: 16px; }
-.footer-grid h4 { font-family: var(--font-body); font-size: 10px; color: #abbad2; font-weight: 450; margin-bottom: 17px; }
+.footer-grid h2 { font-family: var(--font-body); font-size: 10px; color: #abbad2; font-weight: 450; margin-bottom: 17px; }
 .footer-links button, .footer-links a { color: #5c6e8b; font-size: 10px; margin-top: 9px; }
 .footer-delivery > p { color: #5c6e8b; font-size: 10px; line-height: 1.9; max-width: 210px; }
 .cod-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 8px; border: 1px solid #ffffff0e; border-radius: 4px; padding: 5px 8px; color: #8da2c3; margin-top: 13px; }
@@ -828,7 +828,7 @@ textarea { resize: vertical; min-height: 95px; }
 .morocco-dot { display: inline-block; width: 4px; height: 4px; background: #699b7d; border-radius: 50%; vertical-align: middle; margin-inline-end: 3px; }
 
 /* Shopping, order placement, and the private tracking receipt. */
-.modal-header h2 > span { display: inline-flex; align-items: center; justify-content: center; margin-inline-start: 12px; vertical-align: middle; width: 24px; height: 24px; border: 1px solid #ffffff17; color: #8ea8d0; background: #ffffff05; border-radius: 50%; font-size: 10px; letter-spacing: 0; }
+.modal-header .modal-title > span { display: inline-flex; align-items: center; justify-content: center; margin-inline-start: 12px; vertical-align: middle; width: 24px; height: 24px; border: 1px solid #ffffff17; color: #8ea8d0; background: #ffffff05; border-radius: 50%; font-size: 10px; letter-spacing: 0; }
 .modal-header .icon-button { width: 31px; height: 31px; background: #ffffff04; border: 1px solid #ffffff10; }
 .modal-header .icon-button svg { width: 15px; height: 15px; }
 .modal.drawer { display: flex; flex-direction: column; border-radius: 0; border-width: 0 0 0 1px; padding: 27px; max-height: 100dvh; }
@@ -862,7 +862,7 @@ textarea { resize: vertical; min-height: 95px; }
 .secure-note { display: flex; align-items: center; justify-content: center; gap: 6px; color: #546f94; font-size: 9px; margin-top: 14px; }
 .secure-note svg { width: 12px; height: 12px; stroke-width: 1.5; }
 .product-modal .modal-header { padding-bottom: 18px; margin-bottom: 26px; }
-.product-modal .modal-header h2 { font-family: var(--font-body); font-size: 12px; color: #8d9fbc; font-weight: 400; letter-spacing: 0; }
+.product-modal .modal-header .modal-title { font-family: var(--font-body); font-size: 12px; color: #8d9fbc; font-weight: 400; letter-spacing: 0; margin: 0; }
 .detail-copy > .product-price { display: inline-flex; color: #e0ebff; font-size: 24px; font-weight: 500; margin-top: 20px; gap: 7px; }
 .detail-copy > .product-price small { font-size: 12px; color: #748bb0; }
 .detail-copy > .product-price del { font-size: 14px; color: #536c91; margin-inline-start: 8px; }
@@ -1024,7 +1024,7 @@ textarea { resize: vertical; min-height: 95px; }
  .story h2 { font-size: 29px; }
  .story > p { font-size: 11px; margin-top: 17px; }
  .editorial-caption { left: 25px; bottom: 26px; }
- .editorial-caption h3 { font-size: 27px; }
+ .editorial-caption h2 { font-size: 27px; }
  .value { padding-inline: 18px; gap: 10px; }
  .value-icon { width: 28px; height: 28px; border-radius: 6px; }
  .value-icon svg { width: 14px; height: 14px; }
@@ -1070,7 +1070,7 @@ textarea { resize: vertical; min-height: 95px; }
  .hero-spec { left: 0; top: 44px; font-size: 6px; }
  .hero-spec strong { font-size: 8px; letter-spacing: .5px; }
  .floating-product { right: 0; left: auto; bottom: 48px; width: 198px; padding: 13px 14px; gap: 10px; }
- .floating-product h3 { font-size: 10px; }
+ .floating-product h2 { font-size: 10px; }
  .floating-product p { font-size: 10px; margin-top: 4px; }
  .floating-product p span { font-size: 7px; }
  .floating-product > button { width: 28px; height: 28px; }
@@ -1109,7 +1109,7 @@ textarea { resize: vertical; min-height: 95px; }
  .editorial-image { height: 325px; }
  .editorial-image img { width: 430px; height: 430px; top: -52px; right: -113px; }
  .editorial-caption { left: 24px; bottom: 25px; }
- .editorial-caption h3 { font-size: 29px; }
+ .editorial-caption h2 { font-size: 29px; }
  .story { padding: 0; }
  .story h2 { font-size: 32px; max-width: 360px; line-height: 1.3; margin-top: 13px; letter-spacing: -1px; }
  .story > p { font-size: 11px; margin-top: 19px; max-width: 430px; }
@@ -1130,7 +1130,7 @@ textarea { resize: vertical; min-height: 95px; }
  .footer-about .brand-type { font-size: 14px; }
  .footer-about .brand-mark { width: 28px; }
  .footer-about > p { max-width: 290px; margin-top: 13px; font-size: 10px; }
- .footer-grid h4 { font-size: 10px; margin-bottom: 13px; }
+ .footer-grid h2 { font-size: 10px; margin-bottom: 13px; }
  .footer-delivery { grid-column: 1/-1; padding-top: 0; }
  .footer-delivery > p { max-width: 300px; font-size: 10px; }
  .cod-pill { font-size: 8px; margin-top: 10px; }
@@ -1138,7 +1138,7 @@ textarea { resize: vertical; min-height: 95px; }
  .footer-bottom > div { width: 100%; justify-content: space-between; gap: 15px; }
  .footer-bottom button { font-size: 8px; }
  .modal-header { padding-right: 0; }
- .modal-header h2 { font-size: 20px; }
+ .modal-header .modal-title { font-size: 20px; }
  .modal.drawer { padding: 23px; }
  .cart-line { grid-template-columns: 66px 1fr auto; gap: 12px; padding-block: 19px; }
  .cart-image { width: 66px; height: 89px; }
