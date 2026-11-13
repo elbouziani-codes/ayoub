@@ -39,8 +39,14 @@ import {
   Box,
   Pause,
   Play,
+  Sun,
+  Moon,
 } from "lucide-react";
-import { SUPPORT_URL } from "@/lib/shop-config";
+import {
+  FACEBOOK_URL,
+  INSTAGRAM_URL,
+  SUPPORT_URL,
+} from "@/lib/shop-config";
 import { productImageSet, productThumbnail } from "@/lib/product-images";
 import HeroWatch from "./hero-watch";
 import WatchShowroom from "./watch-showroom";
@@ -97,6 +103,34 @@ const hexopsCredit = {
   fr: { label: "Développé par", visit: "Visiter HexOps" },
   ar: { label: "طوّرته", visit: "زيارة HexOps" },
 };
+const socialLabels = {
+  en: { menu: "Contact us", open: "Show contact options", close: "Hide contact options", facebook: "Visit us on Facebook", instagram: "Visit us on Instagram", whatsapp: "Chat with us on WhatsApp" },
+  fr: { menu: "Nous contacter", open: "Afficher les options de contact", close: "Masquer les options de contact", facebook: "Retrouvez-nous sur Facebook", instagram: "Retrouvez-nous sur Instagram", whatsapp: "Écrivez-nous sur WhatsApp" },
+  ar: { menu: "تواصل معنا", open: "عرض وسائل التواصل", close: "إخفاء وسائل التواصل", facebook: "تابعنا على فيسبوك", instagram: "تابعنا على إنستغرام", whatsapp: "تواصل معنا على واتساب" },
+};
+const themeLabels = {
+  en: { light: "Use light mode", dark: "Use dark mode" },
+  fr: { light: "Activer le mode clair", dark: "Activer le mode sombre" },
+  ar: { light: "تفعيل الوضع الفاتح", dark: "تفعيل الوضع الداكن" },
+};
+
+function FacebookIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M13.7 21v-8h2.7l.4-3.1h-3.1v-2c0-.9.3-1.5 1.6-1.5H17V3.6c-.8-.1-1.7-.2-2.5-.2-2.5 0-4.2 1.5-4.2 4.3v2.2H7.5V13h2.8v8h3.4Z" />
+    </svg>
+  );
+}
+
+function InstagramIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+      <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.4" cy="6.7" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
 
 function Brand() {
   return (
@@ -224,6 +258,7 @@ export default function Storefront({
   const [locale, setLocale] = useState<Locale>(initialLocale);
   const rootRef = useRef<HTMLDivElement>(null);
   const [motionPaused, setMotionPaused] = useState(false);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
   useStoreMotion(rootRef, motionPaused);
   const d = useMemo(() => localizedDictionary(locale, contentOverrides), [locale, contentOverrides]);
   const t = (k: TranslationKey) => d[k];
@@ -241,6 +276,7 @@ export default function Storefront({
   const [imageIndex, setImageIndex] = useState(0);
   const [detailQty, setDetailQty] = useState(1);
   const [mobileNav, setMobileNav] = useState(false);
+  const [socialOpen, setSocialOpen] = useState(false);
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState("featured");
   const [showFilters, setShowFilters] = useState(false);
@@ -267,6 +303,14 @@ export default function Storefront({
   useEffect(() => {
     try {
       setMotionPaused(localStorage.getItem("ayoub-motion") === "paused");
+      const savedTheme = localStorage.getItem("ayoub-theme");
+      setTheme(
+        savedTheme === "light" || savedTheme === "dark"
+          ? savedTheme
+          : window.matchMedia("(prefers-color-scheme: light)").matches
+            ? "light"
+            : "dark",
+      );
       const l = localStorage.getItem("ayoub-language");
       if (l === "en" || l === "fr" || l === "ar") setLocale(l);
       const c = JSON.parse(localStorage.getItem("ayoub-cart") || "[]");
@@ -300,6 +344,10 @@ export default function Storefront({
     }
     if (params.get("track")) setOverlay("track");
   }, []);
+  useEffect(() => {
+    document.documentElement.dataset.shopTheme = theme;
+    if (ready) localStorage.setItem("ayoub-theme", theme);
+  }, [theme, ready]);
   useEffect(() => {
     if (ready)
       try {
@@ -372,6 +420,7 @@ export default function Storefront({
     setError("");
     setOverlay(which);
     setMobileNav(false);
+    setSocialOpen(false);
   };
   async function refresh() {
     try {
@@ -647,6 +696,7 @@ export default function Storefront({
       className="storefront"
       dir={locale === "ar" ? "rtl" : "ltr"}
       data-motion={motionPaused ? "paused" : "enabled"}
+      data-theme={theme}
     >
       <div className="announcement">
         <Truck />
@@ -696,6 +746,15 @@ export default function Storefront({
               aria-pressed={motionPaused}
             >
               {motionPaused ? <Play /> : <Pause />}
+            </button>
+            <button
+              className="icon-button theme-toggle"
+              onClick={() => setTheme((value) => value === "dark" ? "light" : "dark")}
+              aria-label={themeLabels[locale][theme === "dark" ? "light" : "dark"]}
+              title={themeLabels[locale][theme === "dark" ? "light" : "dark"]}
+              aria-pressed={theme === "light"}
+            >
+              {theme === "dark" ? <Sun /> : <Moon />}
             </button>
             <button
               className="icon-button"
@@ -1254,9 +1313,33 @@ export default function Storefront({
           </div>
         </div>
       </footer>
-      <a className="hexops-float" href="https://hexops.pro" target="_blank" rel="noopener noreferrer" aria-label={hexopsCredit[locale].visit} title="HexOps" inert={overlay ? true : undefined}>
-        <Image src="/images/hexops-icon.ico" alt="" width={20} height={20} unoptimized />
-      </a>
+      <div className="floating-socials" inert={overlay ? true : undefined}>
+        {socialOpen && <div className="social-links" id="social-contact-menu" aria-label={socialLabels[locale].menu}>
+          <a className="social-link facebook" href={FACEBOOK_URL} target="_blank" rel="noopener noreferrer" aria-label={socialLabels[locale].facebook} title="Facebook" onClick={() => setSocialOpen(false)}>
+            <FacebookIcon />
+          </a>
+          <a className="social-link instagram" href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" aria-label={socialLabels[locale].instagram} title="Instagram" onClick={() => setSocialOpen(false)}>
+            <InstagramIcon />
+          </a>
+          <a className="social-link whatsapp" href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" aria-label={socialLabels[locale].whatsapp} title="WhatsApp" onClick={() => setSocialOpen(false)}>
+            <MessageCircle aria-hidden="true" />
+          </a>
+        </div>}
+        <button
+          className={`social-trigger${socialOpen ? " active" : ""}`}
+          type="button"
+          aria-expanded={socialOpen}
+          aria-controls="social-contact-menu"
+          aria-label={socialOpen ? socialLabels[locale].close : socialLabels[locale].open}
+          title={socialLabels[locale].menu}
+          onClick={() => setSocialOpen((value) => !value)}
+        >
+          {socialOpen ? <X aria-hidden="true" /> : <MessageCircle aria-hidden="true" />}
+        </button>
+        <a className="hexops-float" href="https://hexops.pro" target="_blank" rel="noopener noreferrer" aria-label={hexopsCredit[locale].visit} title="HexOps">
+          <Image src="/images/hexops-icon.ico" alt="" width={27} height={27} unoptimized />
+        </a>
+      </div>
 
       {overlay === "cart" && (
         <Modal

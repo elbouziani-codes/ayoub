@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { openDatabase } from './helpers/database.mjs';
-import { hashLocalAdminPassword, hashPassword, verifyPassword, credentialVersion, sessionToken } from '../lib/server/admin-credentials.ts';
+import { hashLocalAdminPassword, hashPassword, verifyPassword, credentialVersion, sessionToken, needsPasswordRehash, PASSWORD_ITERATIONS, LEGACY_PASSWORD_ITERATIONS } from '../lib/server/admin-credentials.ts';
 import { createSession, findSession, revokeSession, SESSION_SECONDS } from '../lib/server/admin-session-store.ts';
 import { consumeRateLimit, rateLimitKey } from '../lib/server/rate-limit-store.ts';
 import { handleError, HttpError } from '../lib/server/http.ts';
@@ -58,12 +58,19 @@ if (!isMainThread) {
 
   test('password derivation matches an independent PBKDF2 vector and preserves exact UTF-8 input', async () => {
     const input = `${password} ساعة`;
-    const expected = pbkdf2Sync(input, Buffer.from(salt, 'hex'), 100000, 32, 'sha256').toString('hex');
+    const expected = pbkdf2Sync(input, Buffer.from(salt, 'hex'), PASSWORD_ITERATIONS, 32, 'sha256').toString('hex');
     const encoded = await hashPassword(input, salt);
-    assert.equal(encoded, `pbkdf2-sha256$100000$${salt}$${expected}`);
+    assert.equal(encoded, `pbkdf2-sha256$${PASSWORD_ITERATIONS}$${salt}$${expected}`);
     assert.equal(await verifyPassword(input, encoded), true);
     assert.equal(await verifyPassword(`${input} `, encoded), false);
     assert.equal(await verifyPassword('wrong-password', encoded), false);
+  });
+
+  test('legacy password hashes remain verifiable and are marked for a transparent work-factor upgrade', async () => {
+    const encoded = await hashPassword(password, salt, LEGACY_PASSWORD_ITERATIONS);
+    assert.equal(await verifyPassword(password, encoded), true);
+    assert.equal(needsPasswordRehash(encoded), true);
+    assert.equal(needsPasswordRehash(await hashPassword(password, salt)), false);
   });
 
   test('local plaintext bootstrap derives a stable hash without storing it in .env', async () => {
@@ -76,11 +83,12 @@ if (!isMainThread) {
 
   test('password hashes reject malformed encodings, unsupported work factors and oversized inputs', async () => {
     const encoded = await hashPassword(password, salt);
-    for (const invalid of ['', 'plaintext-password', encoded.replace('100000', '1000000'), encoded.replace(salt, salt.slice(2)), `${encoded}x`, encoded.toUpperCase()]) {
+    for (const invalid of ['', 'plaintext-password', encoded.replace(String(PASSWORD_ITERATIONS), '1000000'), encoded.replace(salt, salt.slice(2)), `${encoded}x`, encoded.toUpperCase()]) {
       assert.equal(await verifyPassword(password, invalid), false);
     }
     assert.equal(await verifyPassword('x'.repeat(257), encoded), false);
     await assert.rejects(hashPassword(password, 'invalid-salt'));
+    await assert.rejects(hashPassword(password, salt, 1));
     const second = await hashPassword(password);
     const third = await hashPassword(password);
     assert.notEqual(second, third, 'Fresh salts must produce different hashes for the same password');

@@ -46,6 +46,23 @@
   --sidebar-border: rgba(255,255,255,.1);
   --sidebar-ring: #4d8dff;
 }
+html[data-shop-theme='light'] {
+  color-scheme: light;
+  --background: #eef3fa;
+  --foreground: #142033;
+  --card: #ffffff;
+  --card-foreground: #142033;
+  --popover: #ffffff;
+  --popover-foreground: #142033;
+  --secondary: #e8eef7;
+  --secondary-foreground: #1b2a42;
+  --muted: #e8eef7;
+  --muted-foreground: #60708a;
+  --border: rgba(24, 54, 93, .14);
+  --input: rgba(24, 54, 93, .12);
+  --text-secondary: #51627b;
+  --text-muted: #718099;
+}
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

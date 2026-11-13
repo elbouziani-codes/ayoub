@@ -148,3 +148,17 @@
   .watch-atelier *, .watch-atelier *::before, .watch-atelier *::after { transition: none !important; animation: none !important; }
   .atelier-shop:hover, .atelier-finish:hover .atelier-swatch { transform: none; }
 }
+
+.storefront[data-theme='light'] .atelier-topline > span:first-child { color: #3f6188; }
+.storefront[data-theme='light'] .atelier-edition { color: #718198; }
+.storefront[data-theme='light'] .atelier-shell { border-color: #315f9230; background: radial-gradient(ellipse at 78% 42%, #d7e5f588, transparent 60%), linear-gradient(130deg, #fff, #e7eef7 65%); box-shadow: inset 0 1px 0 #fff, 0 30px 60px #2f4e6d1c; }
+.storefront[data-theme='light'] .atelier-shell::before { box-shadow: inset 0 0 85px #6d89a312; }
+.storefront[data-theme='light'] .atelier-details h2 { color: #172b48; }
+.storefront[data-theme='light'] .atelier-description, .storefront[data-theme='light'] .atelier-field-label,
+.storefront[data-theme='light'] .atelier-finish, .storefront[data-theme='light'] .atelier-finish-hint,
+.storefront[data-theme='light'] .atelier-disclaimer { color: #60738b; }
+.storefront[data-theme='light'] .atelier-finish:hover, .storefront[data-theme='light'] .atelier-finish.is-selected { color: #193d68; }
+.storefront[data-theme='light'] .atelier-shop { color: #234e7f; border-color: #416fa13d; background: #e0ebf8; }
+.storefront[data-theme='light'] .atelier-views, .storefront[data-theme='light'] .atelier-tools { border-color: #315f9228; background: #f8fbffe8; }
+.storefront[data-theme='light'] .atelier-views button, .storefront[data-theme='light'] .atelier-tools button { color: #526d8e; }
+.storefront[data-theme='light'] .atelier-bottomline { border-color: #315f9224; color: #5c718c; }

@@ -117,12 +117,14 @@ try {
     assert.ok(email && password, "Set ADMIN_TEST_EMAIL and ADMIN_TEST_PASSWORD for the local password administrator");
     loginCredentials = { email: email.trim().toLowerCase(), password };
 
-    await check("A gateway sign-in cannot bypass the configured administrator password", async () => {
-      const gateway = await gatewaySignIn();
-      const { data } = await request("/api/admin/session", { headers: { Cookie: gateway.cookie } });
+    await check("The removed gateway sign-in cannot bypass the configured administrator password", async () => {
+      await request("/signin-with-chatgpt?return_to=%2Fadmin", {
+        expected: 404, headers: { "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Dest": "document" },
+      });
+      const { data } = await request("/api/admin/session");
       assert.equal(data.authenticated, false);
       assert.equal(data.isAdmin, false);
-      await request("/api/admin/products", { headers: { Cookie: gateway.cookie }, expected: 401 });
+      await request("/api/admin/products", { expected: 401 });
     });
 
     await check("Password sign-in normalizes email and sets a private eight-hour session cookie", async () => {

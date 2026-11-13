@@ -7,7 +7,8 @@ export async function GET(request: Request, context: { params: Promise<{ key: st
     const object = await getBucket().get(key);
     if (!object) throw new HttpError(404, "Image not found", "not_found");
     const headers = new Headers({ "Cache-Control": "public, max-age=31536000, immutable", "ETag": object.httpEtag,
-      "X-Content-Type-Options": "nosniff", "Cross-Origin-Resource-Policy": "same-origin", "Content-Disposition": "inline" });
+      "X-Content-Type-Options": "nosniff", "Cross-Origin-Resource-Policy": "same-origin", "Content-Disposition": "inline",
+      "Content-Security-Policy": "default-src 'none'; sandbox" });
     headers.set("Content-Type", key.endsWith(".png") ? "image/png" : key.endsWith(".jpg") ? "image/jpeg" : "image/webp");
     if (request.headers.get("If-None-Match") === object.httpEtag) return new Response(null, { status: 304, headers });
     return new Response(object.body, { headers });

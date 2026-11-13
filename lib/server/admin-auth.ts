@@ -1,10 +1,10 @@
 import { env } from "cloudflare:workers";
 import { cookies } from "next/headers";
 import { z } from "zod";
-import { hashLocalAdminPassword, validPasswordHash, verifyPassword } from "./admin-credentials";
+import { credentialVersion, hashLocalAdminPassword, hashPassword, needsPasswordRehash, validPasswordHash, verifyPassword } from "./admin-credentials";
 import { createSession, findSession, revokeSession, SESSION_SECONDS } from "./admin-session-store";
 import { getDatabase } from "./db";
-import { readAccount, type AdminAccount } from "./admin-account-store";
+import { readAccount, updateAccount, type AdminAccount } from "./admin-account-store";
 import { HttpError } from "./http";
 import type { AdminSession } from "../types";
 
@@ -15,14 +15,21 @@ const loginInput = z.object({
   password: z.string().min(1).max(256),
 }).strict();
 
-export async function passwordAdminConfig(): Promise<{ configured: boolean; email: string; hash: string; recoveryEmail: string; available: boolean }> {
-  const email = (env.ADMIN_LOGIN_EMAIL ?? "").trim().toLowerCase();
-  const password = env.ADMIN_PASSWORD ?? "";
-  const configuredHash = env.ADMIN_PASSWORD_HASH ?? "";
-  const hash = configuredHash || (password.length >= 12 && password.length <= 256 ? await hashLocalAdminPassword(email, password) : "");
-  const recoveryEmail = (env.ADMIN_RECOVERY_EMAIL ?? email).trim().toLowerCase();
-  const configured = Boolean(email || password || configuredHash || env.ADMIN_RECOVERY_EMAIL);
-  return { configured, email, hash, recoveryEmail, available: z.string().email().max(254).safeParse(email).success && z.string().email().max(254).safeParse(recoveryEmail).success && validPasswordHash(hash) };
+type PasswordAdminConfig = { configured: boolean; email: string; hash: string; recoveryEmail: string; available: boolean };
+let passwordConfigPromise: Promise<PasswordAdminConfig> | undefined;
+
+export function passwordAdminConfig(): Promise<PasswordAdminConfig> {
+  // Runtime secrets are immutable until the server process restarts. Caching
+  // prevents public session probes from repeatedly paying the PBKDF2 cost.
+  return passwordConfigPromise ??= (async () => {
+    const email = (env.ADMIN_LOGIN_EMAIL ?? "").trim().toLowerCase();
+    const password = env.ADMIN_PASSWORD ?? "";
+    const configuredHash = env.ADMIN_PASSWORD_HASH ?? "";
+    const hash = configuredHash || (password.length >= 12 && password.length <= 256 ? await hashLocalAdminPassword(email, password) : "");
+    const recoveryEmail = (env.ADMIN_RECOVERY_EMAIL ?? email).trim().toLowerCase();
+    const configured = Boolean(email || password || configuredHash || env.ADMIN_RECOVERY_EMAIL);
+    return { configured, email, hash, recoveryEmail, available: z.string().email().max(254).safeParse(email).success && z.string().email().max(254).safeParse(recoveryEmail).success && validPasswordHash(hash) };
+  })();
 }
 
 async function currentToken(): Promise<string | undefined> {
@@ -67,14 +74,21 @@ function cookieName(request: Request): string {
 }
 
 function cookieValue(request: Request, value: string, maxAge: number): string {
-  return `${cookieName(request)}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${new URL(request.url).protocol === "https:" ? "; Secure" : ""}`;
+  return `${cookieName(request)}=${value}; Path=/; HttpOnly; SameSite=Strict; Priority=High; Max-Age=${maxAge}${new URL(request.url).protocol === "https:" ? "; Secure" : ""}`;
 }
 
 export async function loginAdmin(request: Request, email: string, password: string): Promise<{ session: AdminSession; cookie: string }> {
-  const account = await getPasswordAccount();
+  let account = await getPasswordAccount();
   // Derive for unknown emails too, keeping invalid-credential responses uniform.
   const passwordMatches = await verifyPassword(password, account.passwordHash);
   if (email !== account.email || !passwordMatches) throw new HttpError(401, "Invalid email or password.", "invalid_credentials");
+  if (needsPasswordRehash(account.passwordHash)) {
+    const passwordHash = await hashPassword(password);
+    if (!await updateAccount(getDatabase(), account, { email: account.email, passwordHash })) {
+      throw new HttpError(401, "Invalid email or password.", "invalid_credentials");
+    }
+    account = { ...account, passwordHash, version: await credentialVersion(account.email, passwordHash) };
+  }
   const created = await createSession(getDatabase(), account.email, account.version, undefined, await currentToken());
   return { session: { authenticated: true, isAdmin: true, user: { email: account.email, displayName: "Administrator" }, authMethod: "password", passwordLoginAvailable: true }, cookie: cookieValue(request, created.token, SESSION_SECONDS) };
 }
