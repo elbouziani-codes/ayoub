@@ -5,7 +5,8 @@ import { requireSameOrigin, readJson, handleError, HttpError } from '../lib/serv
 
 const product = { id: 'watch-1', price: 650, stock: 5 };
 const input = { customer: { name: 'Ayoub Test', phone: '06 12 34 56 78', city: 'Casablanca', address: '10 Rue Test, Apartment 3' },
-  items: [{ productId: 'watch-1', quantity: 1 }], idempotencyKey: 'fd02be92-d50e-4d4d-8f48-b0bf150f7a0f' };
+  items: [{ productId: 'watch-1', quantity: 1 }], idempotencyKey: 'fd02be92-d50e-4d4d-8f48-b0bf150f7a0f',
+  termsAccepted: true, termsVersionId: 'b1c03f91-49e5-48c8-9938-f15a7c647c55', marketingConsent: false, locale: 'fr' };
 
 test('checkout validates and normalizes Moroccan phone numbers', () => {
   assert.equal(orderInputSchema.parse(input).customer.phone, '0612345678');
@@ -25,6 +26,7 @@ test('malicious quantities, duplicate products, and weak idempotency keys are re
   for (const quantity of [-1, 0, 1.5, 11]) assert.equal(orderInputSchema.safeParse({ ...input, items: [{ productId: 'watch-1', quantity }] }).success, false);
   assert.equal(orderInputSchema.safeParse({ ...input, items: [input.items[0], input.items[0]] }).success, false);
   assert.equal(orderInputSchema.safeParse({ ...input, idempotencyKey: 'guessable' }).success, false);
+  assert.equal(orderInputSchema.safeParse({ ...input, termsAccepted: false }).success, false);
 });
 
 test('idempotency fingerprint binds normalized customer details and item quantities', async () => {

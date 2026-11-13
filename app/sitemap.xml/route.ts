@@ -1,5 +1,6 @@
 import { listProducts } from "@/lib/server/catalog";
 import { SITE_URL } from "@/lib/shop-config";
+import { legalPageSlugs } from "@/lib/legal";
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +10,8 @@ export async function GET() {
   const products = await listProducts();
   const paths: { path: string; updatedAt?: string }[] = [
     { path: "/" },
-    { path: "/policies/shipping" },
-    { path: "/policies/privacy" },
-    { path: "/policies/terms" },
+    { path: "/support" },
+    ...legalPageSlugs.map((slug) => ({ path: `/policies/${slug}` })),
     ...products.map((product) => ({ path: `/products/${encodeURIComponent(product.slug)}`, updatedAt: product.updatedAt })),
   ];
   return new Response(

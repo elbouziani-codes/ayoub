@@ -54,6 +54,10 @@ export const orderInputSchema = z.object({
   customer: customerSchema,
   items: z.array(z.object({ productId: cleanText(1, 100), quantity: z.number().int().min(1).max(10) })).min(1).max(20),
   idempotencyKey: z.string().uuid(),
+  termsAccepted: z.literal(true, { message: "Accept the terms and conditions to place the order" }),
+  termsVersionId: z.string().uuid(),
+  marketingConsent: z.boolean().default(false),
+  locale: z.enum(["en", "fr", "ar"]),
 }).superRefine((value, ctx) => {
   if (new Set(value.items.map((item) => item.productId)).size !== value.items.length) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Each product must appear once", path: ["items"] });
@@ -68,13 +72,13 @@ const transitions: Record<OrderStatus, OrderStatus[]> = {
   pending: ["confirmed", "cancelled"], confirmed: ["shipped", "cancelled"], shipped: ["delivered"], delivered: [], cancelled: [],
 };
 export function canTransition(from: OrderStatus, to: OrderStatus): boolean { return from === to || transitions[from].includes(to); }
-export function calculateTotals(items: { quantity: number; productId: string }[], products: Product[]) {
+export function calculateTotals(items: { quantity: number; productId: string }[], products: Product[], delivery = { fee: 35, freeThreshold: 1000 }) {
   const subtotal = items.reduce((sum, item) => {
     const product = products.find((p) => p.id === item.productId);
     if (!product || product.stock < item.quantity) throw new Error("unavailable");
     return sum + product.price * item.quantity;
   }, 0);
-  const shipping = subtotal >= 1000 ? 0 : 35;
+  const shipping = subtotal >= delivery.freeThreshold ? 0 : delivery.fee;
   return { subtotal, shipping, total: subtotal + shipping };
 }
 
@@ -82,7 +86,8 @@ export function calculateTotals(items: { quantity: number; productId: string }[]
 export function canonicalOrderPayload(input: z.infer<typeof orderInputSchema>): string {
   const { name, phone, city, address, email = "", notes = "" } = input.customer;
   return JSON.stringify({ customer: { name, phone, city, address, email, notes },
-    items: [...input.items].sort((a, b) => a.productId.localeCompare(b.productId)) });
+    items: [...input.items].sort((a, b) => a.productId.localeCompare(b.productId)), termsVersionId: input.termsVersionId,
+    termsAccepted: input.termsAccepted, marketingConsent: input.marketingConsent, locale: input.locale });
 }
 
 export async function sha256(value: string): Promise<string> {

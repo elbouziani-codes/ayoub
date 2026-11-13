@@ -75,3 +75,70 @@ export const contentAssets = sqliteTable("content_assets", {
   altEn: text("alt_en").notNull(), altFr: text("alt_fr").notNull(), altAr: text("alt_ar").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
+
+/** Singleton JSON settings document. It is validated by the server before every write. */
+export const storeSettings = sqliteTable("store_settings", {
+  id: text("id").primaryKey(),
+  settings: text("settings").notNull(),
+  updatedAt: text("updated_at").notNull(),
+  updatedBy: text("updated_by").notNull(),
+}, (table) => [check("store_settings_singleton", sql`${table.id} = 'store'`)]);
+
+export const legalPages = sqliteTable("legal_pages", {
+  slug: text("slug").primaryKey(),
+  draftVersionId: text("draft_version_id"),
+  publishedVersionId: text("published_version_id"),
+  updatedAt: text("updated_at").notNull(),
+});
+
+/** Published rows are immutable; editing always creates or updates a separate draft. */
+export const legalPageVersions = sqliteTable("legal_page_versions", {
+  id: text("id").primaryKey(),
+  pageSlug: text("page_slug").notNull().references(() => legalPages.slug, { onDelete: "restrict" }),
+  version: integer("version").notNull(),
+  titleEn: text("title_en").notNull(), titleFr: text("title_fr").notNull(), titleAr: text("title_ar").notNull(),
+  sectionsEn: text("sections_en").notNull(), sectionsFr: text("sections_fr").notNull(), sectionsAr: text("sections_ar").notNull(),
+  status: text("status").notNull().default("draft"),
+  createdBy: text("created_by").notNull(), createdAt: text("created_at").notNull(), publishedAt: text("published_at"),
+}, (table) => [
+  uniqueIndex("legal_page_versions_number_idx").on(table.pageSlug, table.version),
+  index("legal_page_versions_page_idx").on(table.pageSlug, table.createdAt),
+  check("legal_page_versions_status_valid", sql`${table.status} IN ('draft','published','archived')`),
+]);
+
+export const orderPolicyAcceptances = sqliteTable("order_policy_acceptances", {
+  orderId: text("order_id").primaryKey().references(() => orders.id, { onDelete: "restrict" }),
+  legalVersionId: text("legal_version_id").notNull().references(() => legalPageVersions.id, { onDelete: "restrict" }),
+  locale: text("locale").notNull(), termsAccepted: integer("terms_accepted", { mode: "boolean" }).notNull(),
+  marketingConsent: integer("marketing_consent", { mode: "boolean" }).notNull().default(false),
+  acceptedAt: text("accepted_at").notNull(),
+}, (table) => [
+  check("order_policy_locale_valid", sql`${table.locale} IN ('en','fr','ar')`),
+  check("order_policy_terms_required", sql`${table.termsAccepted} = 1`),
+]);
+
+export const customerComplaints = sqliteTable("customer_complaints", {
+  id: text("id").primaryKey(), reference: text("reference").notNull().unique(), orderNumber: text("order_number"),
+  customerName: text("customer_name").notNull(), email: text("email"), phone: text("phone").notNull(),
+  subject: text("subject").notNull(), message: text("message").notNull(), status: text("status").notNull().default("open"),
+  trackingHash: text("tracking_hash").notNull(), adminNotes: text("admin_notes").notNull().default(""),
+  createdAt: text("created_at").notNull(), updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  index("customer_complaints_status_idx").on(table.status, table.createdAt),
+  check("customer_complaints_status_valid", sql`${table.status} IN ('open','reviewing','resolved','closed')`),
+]);
+
+export const returnRequests = sqliteTable("return_requests", {
+  id: text("id").primaryKey(), reference: text("reference").notNull().unique(), orderId: text("order_id").notNull().references(() => orders.id, { onDelete: "restrict" }),
+  reason: text("reason").notNull(), details: text("details").notNull(), status: text("status").notNull().default("requested"),
+  adminNotes: text("admin_notes").notNull().default(""), createdAt: text("created_at").notNull(), updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  index("return_requests_status_idx").on(table.status, table.createdAt),
+  check("return_requests_status_valid", sql`${table.status} IN ('requested','approved','rejected','received','refunded')`),
+]);
+
+export const adminAuditLogs = sqliteTable("admin_audit_logs", {
+  id: text("id").primaryKey(), adminEmail: text("admin_email").notNull(), action: text("action").notNull(),
+  resourceType: text("resource_type").notNull(), resourceId: text("resource_id").notNull(),
+  changes: text("changes").notNull(), createdAt: text("created_at").notNull(),
+}, (table) => [index("admin_audit_logs_created_idx").on(table.createdAt)]);

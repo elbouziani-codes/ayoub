@@ -53,6 +53,7 @@ import WatchShowroom from "./watch-showroom";
 import TiltSurface from "./tilt-surface";
 import { useStoreMotion } from "@/hooks/use-store-motion";
 import type { Product, TrackedOrder, Order, EditorialAsset } from "@/lib/types";
+import { legalPageLabels } from "@/lib/legal";
 import {
   localizedDictionary,
   type ContentOverrides,
@@ -98,6 +99,17 @@ const CITIES = [
   "Laâyoune",
   "Dakhla",
 ];
+type PublicStoreSettings = {
+  shipping: { fee: number; freeThreshold: number; estimatedDaysMin: number; estimatedDaysMax: number; codEnabled: boolean; cities: string[] };
+  appearance: { primaryColor: string; secondaryColor: string; defaultTheme: "dark" | "light" | "system"; radius: "sharp" | "soft" | "round" };
+  checkout: { instructions: string; confirmationMessage: string; marketingEnabled: boolean };
+};
+const fallbackSettings: PublicStoreSettings = { shipping: { fee: 35, freeThreshold: 1000, estimatedDaysMin: 2, estimatedDaysMax: 7, codEnabled: true, cities: CITIES }, appearance: { primaryColor: "#4d8dff", secondaryColor: "#9ac9ff", defaultTheme: "dark", radius: "soft" }, checkout: { instructions: "", confirmationMessage: "", marketingEnabled: false } };
+const legalCheckoutCopy = {
+  en: { accept: "I have read and accept the Terms and Conditions of Sale", marketing: "I agree to receive optional news and offers. I can withdraw this consent.", unavailable: "Ordering is paused until the verified Terms and Conditions are published.", review: "Review your delivery details, items and final total before confirming." },
+  fr: { accept: "J’ai lu et j’accepte les Conditions générales de vente", marketing: "J’accepte de recevoir des actualités et offres facultatives. Je peux retirer ce consentement.", unavailable: "Les commandes sont suspendues jusqu’à la publication des CGV vérifiées.", review: "Vérifiez vos coordonnées, les articles et le total final avant de confirmer." },
+  ar: { accept: "قرأت الشروط العامة للبيع وأوافق عليها", marketing: "أوافق اختياريًا على تلقي الأخبار والعروض ويمكنني سحب موافقتي.", unavailable: "تم تعليق الطلب إلى حين نشر شروط بيع موثقة.", review: "راجع بيانات التوصيل والمنتجات والمبلغ النهائي قبل التأكيد." },
+};
 const hexopsCredit = {
   en: { label: "Developed by", visit: "Visit HexOps" },
   fr: { label: "Développé par", visit: "Visiter HexOps" },
@@ -247,6 +259,8 @@ export default function Storefront({
   initialLocale = "fr",
   contentOverrides = {},
   editorialAsset = { slot: "editorialImage", image: "/images/watch-blue.webp", en: "Blue dial watch detail", fr: "Détails d’une montre bleue", ar: "تفاصيل ساعة زرقاء" },
+  storeSettings = fallbackSettings,
+  termsVersionId = null,
 }: {
   initialProducts: Product[];
   initialProduct?: Product;
@@ -254,6 +268,8 @@ export default function Storefront({
   initialLocale?: Locale;
   contentOverrides?: ContentOverrides;
   editorialAsset?: EditorialAsset;
+  storeSettings?: PublicStoreSettings;
+  termsVersionId?: string | null;
 }) {
   const [locale, setLocale] = useState<Locale>(initialLocale);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -307,7 +323,7 @@ export default function Storefront({
       setTheme(
         savedTheme === "light" || savedTheme === "dark"
           ? savedTheme
-          : window.matchMedia("(prefers-color-scheme: light)").matches
+          : storeSettings.appearance.defaultTheme === "light" || (storeSettings.appearance.defaultTheme === "system" && window.matchMedia("(prefers-color-scheme: light)").matches)
             ? "light"
             : "dark",
       );
@@ -343,7 +359,7 @@ export default function Storefront({
       setShowAll(true);
     }
     if (params.get("track")) setOverlay("track");
-  }, []);
+  }, [storeSettings.appearance.defaultTheme]);
   useEffect(() => {
     document.documentElement.dataset.shopTheme = theme;
     if (ready) localStorage.setItem("ayoub-theme", theme);
@@ -449,7 +465,7 @@ export default function Storefront({
     (sum, { item, product }) => sum + product.price * item.quantity,
     0,
   );
-  const shipping = subtotal >= 1000 ? 0 : 35;
+  const shipping = subtotal >= storeSettings.shipping.freeThreshold ? 0 : storeSettings.shipping.fee;
   const count = cart.reduce((n, i) => n + i.quantity, 0);
   const invalidCart = cartLines.some(
     (x) => !x.product || x.item.quantity > (x.product?.stock || 0),
@@ -609,7 +625,9 @@ export default function Storefront({
       address: String(data.get("address")).trim(),
       notes: String(data.get("notes") || "").trim() || undefined,
     };
-    const payload = JSON.stringify({ customer, items: cart });
+    const termsAccepted = data.get("termsAccepted") === "on";
+    const marketingConsent = data.get("marketingConsent") === "on";
+    const payload = JSON.stringify({ customer, items: cart, termsAccepted, termsVersionId, marketingConsent, locale });
     if (idempotency.current?.payload !== payload)
       idempotency.current = { payload, key: crypto.randomUUID() };
     try {
@@ -697,6 +715,8 @@ export default function Storefront({
       dir={locale === "ar" ? "rtl" : "ltr"}
       data-motion={motionPaused ? "paused" : "enabled"}
       data-theme={theme}
+      data-radius={storeSettings.appearance.radius}
+      style={{ "--shop-primary": storeSettings.appearance.primaryColor, "--shop-secondary": storeSettings.appearance.secondaryColor } as React.CSSProperties}
     >
       <div className="announcement">
         <Truck />
@@ -1278,10 +1298,13 @@ export default function Storefront({
                   {t("contact")}
                 </a>
                 <button onClick={() => open("track")}>{t("track")}</button>
-                <button onClick={() => open("shipping")}>
-                  {t("shipping")}
-                </button>
-                <button onClick={() => open("privacy")}>{t("privacy")}</button>
+                <a href="/support">{legalPageLabels.contact[locale]}</a>
+                <a href="/policies/shipping">{legalPageLabels.shipping[locale]}</a>
+                <a href="/policies/returns">{legalPageLabels.returns[locale]}</a>
+                <a href="/policies/privacy">{legalPageLabels.privacy[locale]}</a>
+                <a href="/policies/cookies">{legalPageLabels.cookies[locale]}</a>
+                <a href="/policies/terms">{legalPageLabels.terms[locale]}</a>
+                <a href="/policies/legal-notice">{legalPageLabels["legal-notice"][locale]}</a>
                 <a href="/admin">{t("admin")}</a>
               </div>
             </div>
@@ -1642,7 +1665,7 @@ export default function Storefront({
                     placeholder={t("selectCity")}
                   />
                   <datalist id="moroccan-cities">
-                    {CITIES.map((c) => (
+                    {storeSettings.shipping.cities.map((c) => (
                       <option key={c} value={c} />
                     ))}
                   </datalist>
@@ -1687,6 +1710,17 @@ export default function Storefront({
                 </div>
                 <Check size={16} />
               </div>
+              {storeSettings.checkout.instructions && <p className="checkout-instructions">{storeSettings.checkout.instructions}</p>}
+              <p className="checkout-review-note"><ShieldCheck size={15} />{legalCheckoutCopy[locale].review}</p>
+              <label className="checkout-consent required-consent">
+                <input name="termsAccepted" type="checkbox" required />
+                <span>{legalCheckoutCopy[locale].accept} <a href="/policies/terms" target="_blank" rel="noopener">{t("terms")}</a>.</span>
+              </label>
+              {storeSettings.checkout.marketingEnabled && <label className="checkout-consent">
+                <input name="marketingConsent" type="checkbox" />
+                <span>{legalCheckoutCopy[locale].marketing}</span>
+              </label>}
+              {!termsVersionId && <div className="form-error" role="alert">{legalCheckoutCopy[locale].unavailable}</div>}
               {error && (
                 <div className="form-error" role="alert">
                   {error}
@@ -1700,7 +1734,7 @@ export default function Storefront({
               <button
                 className="primary-btn checkout-submit"
                 type="submit"
-                disabled={busy || invalidCart || !cart.length || catalogError}
+                disabled={busy || invalidCart || !cart.length || catalogError || !termsVersionId || !storeSettings.shipping.codEnabled}
               >
                 {busy ? (
                   <>

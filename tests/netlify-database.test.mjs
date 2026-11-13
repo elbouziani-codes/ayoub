@@ -10,6 +10,7 @@ import { consumeRateLimit } from '../lib/server/rate-limit-store.ts';
 async function fixture() {
   const pg = new PGlite();
   await pg.exec(await readFile(new URL('../netlify/database/migrations/0001_storefront.sql', import.meta.url), 'utf8'));
+  await pg.exec(await readFile(new URL('../netlify/database/migrations/0002_legal_cms.sql', import.meta.url), 'utf8'));
   const query = async (sql, values) => {
     const result = await pg.query(sql, values);
     return { ...result, rowCount: result.affectedRows ?? result.rows.length };
@@ -38,7 +39,7 @@ test('Postgres baseline contains every D1 table and preserves text and integer d
   const { db, pg } = await fixture();
   try {
     const tables = await db.prepare("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name").all();
-    assert.deepEqual(tables.results.map(row => row.table_name), ['admin_accounts', 'admin_sessions', 'content_assets', 'content_overrides', 'order_items', 'orders', 'products', 'rate_limits']);
+    assert.deepEqual(tables.results.map(row => row.table_name), ['admin_accounts', 'admin_audit_logs', 'admin_sessions', 'content_assets', 'content_overrides', 'customer_complaints', 'legal_page_versions', 'legal_pages', 'order_items', 'order_policy_acceptances', 'orders', 'products', 'rate_limits', 'return_requests', 'store_settings']);
     await addProduct(db, 'watch');
     const product = await db.prepare('SELECT featured, archived, localized_details, images, created_at FROM products WHERE id = ?').bind('watch').first();
     assert.deepEqual(product, { featured: 0, archived: 0, localized_details: null, images: '[]', created_at: '2026-11-06T10:00:00.000Z' });

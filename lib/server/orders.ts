@@ -5,6 +5,8 @@ import { getProductsByIds } from "./catalog";
 import { calculateTotals, canTransition, canonicalOrderPayload, orderInputSchema, sha256, trackingTokenFor } from "./commerce";
 import { HttpError } from "./http";
 import { cancelRestockSql, changeOrderStatusSql, decrementStockSql, insertOrderSql, orderPageQueries, reserveItemSql } from "./order-sql";
+import { getPublishedLegalPage } from "./legal";
+import { getStoreSettings } from "./store-settings";
 
 type OrderRow = { id: string; number: string; customer: string; subtotal: number; shipping: number; total: number;
   status: OrderStatus; idempotency_key: string; request_hash: string; tracking_hash: string; created_at: string; updated_at: string };
@@ -34,16 +36,25 @@ export async function createOrder(input: z.infer<typeof orderInputSchema>) {
   const requestHash = await sha256(canonicalOrderPayload(input));
   const existing = await findByKey(input.idempotencyKey);
   if (existing) return replay(existing, requestHash);
-  const products = await getProductsByIds(input.items.map((item) => item.productId));
+  const [products, settings, terms] = await Promise.all([
+    getProductsByIds(input.items.map((item) => item.productId)), getStoreSettings(), getPublishedLegalPage("terms"),
+  ]);
+  if (!terms || terms.id !== input.termsVersionId) throw new HttpError(409, "The terms changed. Review and accept the current version.", "terms_changed");
+  if (!settings.shipping.codEnabled) throw new HttpError(409, "Cash on delivery is temporarily unavailable", "payment_unavailable");
+  if (!settings.shipping.cities.some((city) => city.localeCompare(input.customer.city, undefined, { sensitivity: "base" }) === 0)) {
+    throw new HttpError(400, "Delivery is not available for this city", "delivery_unavailable");
+  }
   let totals: ReturnType<typeof calculateTotals>;
-  try { totals = calculateTotals(input.items, products); }
+  try { totals = calculateTotals(input.items, products, settings.shipping); }
   catch { throw new HttpError(409, "A watch in your bag is no longer available in that quantity. Please refresh your bag.", "stock_changed"); }
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   const number = `AY-${now.slice(2, 4)}${crypto.randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase()}`;
   const trackingToken = await trackingTokenFor(id, input.idempotencyKey);
   const statements: D1PreparedStatement[] = [db.prepare(insertOrderSql).bind(id, number, JSON.stringify(input.customer), totals.subtotal,
-      totals.shipping, totals.total, input.idempotencyKey, requestHash, await sha256(trackingToken), now, now)];
+      totals.shipping, totals.total, input.idempotencyKey, requestHash, await sha256(trackingToken), now, now),
+    db.prepare(`INSERT INTO order_policy_acceptances (order_id, legal_version_id, locale, terms_accepted, marketing_consent, accepted_at)
+      VALUES (?, ?, ?, 1, ?, ?)`).bind(id, terms.id, input.locale, input.marketingConsent ? 1 : 0, now)];
   for (const item of input.items) {
     const product = products.find((p) => p.id === item.productId)!;
     // A failed CHECK aborts and rolls back the ENTIRE D1 batch. Each guard executes

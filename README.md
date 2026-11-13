@@ -22,6 +22,7 @@ node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0003_daily_sauron.sql
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0004_violet_turbo.sql
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0005_next_the_enforcers.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0006_legal_cms.sql
 ```
 
 Create an ignored `.env` (mode `600`). Legacy gateway-only development can use:
@@ -36,7 +37,7 @@ npm run dev -- --port 5173
 
 Open the URL printed by the server. Administration starts at `/admin/login`; `/admin` redirects there unless authorized. The portable gateway simulation signs in as `seedy@sites.test` and is excluded from production. Development and production databases and image storage are separate.
 
-For local password administration, keep `ADMIN_LOGIN_EMAIL` and the plaintext `ADMIN_PASSWORD` in the ignored `.env`. The server derives a stable PBKDF2 hash at runtime and stores only the hash in D1; `.env` contains no password hash. Keep `.env` private and never commit or deploy it. The hosted Site continues to use the runtime secrets `ADMIN_LOGIN_EMAIL` and `ADMIN_PASSWORD_HASH`; its salted hash uses `pbkdf2-sha256$100000$<32-character salt hex>$<64-character digest hex>` and can be generated with `hashPassword()` in `lib/server/admin-credentials.ts`. A random strong password and the owner's email are provisioned for this deployment; the private local handoff is also in `outputs/admin-login.txt` (excluded from Git and deployment). Changing the password through the account page updates D1 without changing the original bootstrap value in `.env` or Sites runtime settings.
+For local password administration, keep `ADMIN_LOGIN_EMAIL` and the plaintext `ADMIN_PASSWORD` in the ignored `.env`. The server derives a stable PBKDF2 hash at runtime and stores only the hash in D1; `.env` contains no password hash. Keep `.env` private and never commit or deploy it. The hosted Site continues to use the runtime secrets `ADMIN_LOGIN_EMAIL` and `ADMIN_PASSWORD_HASH`; new hashes use 600,000 PBKDF2-SHA256 iterations, while legacy 100,000-iteration hashes are upgraded after a successful login. A hash can be generated with `hashPassword()` in `lib/server/admin-credentials.ts`.
 
 When either password setting is present, password authorization takes precedence over the legacy gateway allowlist. Missing or malformed settings fail closed. With both settings absent, the original Sites sign-in plus `ADMIN_EMAILS` allowlist remains available. The private hosting gate still applies to the entire Site.
 
@@ -62,6 +63,7 @@ When either password setting is present, password authorization takes precedence
 | `components/watch-showroom.tsx`, `components/watch-scene.ts` | Accessible 3D controls and deferred WebGL renderer |
 | `hooks/use-store-motion.ts` | Visibility-aware reveals, scroll progress, pointer lighting |
 | `app/admin/` | Protected dashboard, products, inventory, images, order management |
+| `app/admin/AdminLegalCms.tsx` | Legal revisions, business/shipping/appearance settings, complaints, returns and audit history |
 | `app/api/` | Validated catalog, checkout, tracking, administration and images |
 | `lib/server/` | Authentication, database access, commerce logic, rate limiting, transactions |
 | `lib/catalog.ts` | One-time initial catalog data |
@@ -83,6 +85,16 @@ The fulfillment sequence is `pending → confirmed → shipped → delivered`. P
 
 Tracking requires both the order number and a strong private code. Only the code's hash is stored in D1. Public tracking responses exclude name, phone, email, address and notes. Customers can open WhatsApp support from tracking without sharing their private code.
 
+## Legal CMS and merchant setup
+
+The public legal routes are `/policies/legal-notice`, `/policies/terms`, `/policies/privacy`, `/policies/returns`, `/policies/shipping`, `/policies/cookies` and `/policies/contact`. `/support` provides rate-limited complaint submission, private complaint tracking and authenticated return requests.
+
+Open **Administration → Legal & settings** to complete verified business identity, delivery cities/fees, COD, appearance, checkout instructions and optional marketing consent. Legal documents start as trilingual drafts with explicit incomplete markers. The server refuses to publish a document that still contains an incomplete marker and requires core verified business identity before publishing the legal notice, CGV, privacy or contact page. Publishing creates an immutable historical version; rollback creates a new version rather than changing history.
+
+Checkout is disabled until a CGV version is published. Each successful order records that exact version, language, mandatory acceptance timestamp and separate optional marketing choice inside the order transaction. Shipping fees and eligible cities are recalculated from server settings. Administrative product, order, content, legal, settings and support mutations create redacted audit records.
+
+This implementation does not assert legal compliance by itself. Before publication, the business owner must verify the legal name, owner/company identity, legal form, address, RC/IF/ICE where applicable, capital where required, support details, hosting provider, actual retention periods, processors, international transfers and the applicable CNDP declaration/authorization. A qualified Moroccan professional should review the final published wording.
+
 ## Validate
 
 ```sh
@@ -93,7 +105,7 @@ node tests/seo.test.mjs http://127.0.0.1:5173
 npm run build
 ```
 
-The 36 unit/SQLite tests cover account bootstrap persistence and explicit override, immutable recovery ownership, optimistic concurrent credential updates, atomic session revocation and rollback, corrupt-account rejection, and password derivation, session expiry, revocation, rotation, credential changes, limiter privacy, twelve concurrent login clients sharing five permits, and Moroccan phone validation, shipping, input bounds, idempotency, CSRF checks, transaction rollback, stale catalog/price checks, exactly-once restocking, optimistic stock editing and eight concurrent buyers competing for three units.
+The automated suite covers account bootstrap persistence, credential and session security, limiter privacy, Moroccan phone validation, server-authoritative shipping, explicit legal acceptance, immutable legal versions, support workflow constraints, idempotency, CSRF checks, transaction rollback, stale catalog/price checks, exactly-once restocking, optimistic stock editing and concurrent inventory reservations.
 
 The 17 live local integration checks in password mode exercise real credential cookies, gateway-bypass rejection, login/logout CSRF protection, logout replay rejection, the sixth-attempt lockout with Retry-After, D1, R2 uploads and retrieval, ETags, product CRUD and image ordering, stale-version rejection, checkout, replay conflicts, privacy-safe tracking, order transitions, cancellation, pagination and archival. Password credentials come only from `ADMIN_TEST_EMAIL` and `ADMIN_TEST_PASSWORD`; legacy gateway-only mode retains 13 checks. A complete password-mode run deliberately exhausts its local login window, so wait 15 minutes before rerunning or clear only local test rate-limit records. The script refuses non-loopback URLs. It creates clearly marked local fixtures, archives its product, and retains local test orders for auditing.
 

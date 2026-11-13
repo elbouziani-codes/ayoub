@@ -14,7 +14,7 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "typecheck": "tsc --noEmit",
-    "test": "node tests/commerce.test.mjs && node tests/inventory.test.mjs && node tests/auth.test.mjs && node tests/admin-account.test.mjs && node tests/platform-security.test.mjs && node tests/security-headers.test.mjs && node tests/netlify-database.test.mjs",
+    "test": "node tests/commerce.test.mjs && node tests/inventory.test.mjs && node tests/auth.test.mjs && node tests/admin-account.test.mjs && node tests/platform-security.test.mjs && node tests/security-headers.test.mjs && node tests/legal-cms.test.mjs && node tests/netlify-database.test.mjs",
     "test:netlify": "node tests/platform-security.test.mjs && node tests/netlify-database.test.mjs",
     "test:integration": "node tests/integration.mjs",
     "test:account": "node tests/account-integration.mjs",

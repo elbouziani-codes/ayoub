@@ -6,6 +6,8 @@ import { listProducts, getProductBySlug } from "@/lib/server/catalog";
 import { localizedDictionary, productDescription, productName } from "@/lib/i18n";
 import { getRequestLocale, pageMetadata, productPath, productStructuredData, serializeJsonLd } from "@/lib/seo";
 import { getContentOverrides, getEditorialAsset } from "@/lib/server/content";
+import { getPublishedLegalPage } from "@/lib/server/legal";
+import { getStoreSettings } from "@/lib/server/store-settings";
 export const dynamic = "force-dynamic";
 const findProduct = cache(getProductBySlug);
 export async function generateMetadata({
@@ -30,7 +32,7 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [product, locale, contentOverrides, editorialAsset] = await Promise.all([findProduct(slug), getRequestLocale(), getContentOverrides(), getEditorialAsset()]);
+  const [product, locale, contentOverrides, editorialAsset, storeSettings, terms] = await Promise.all([findProduct(slug), getRequestLocale(), getContentOverrides(), getEditorialAsset(), getStoreSettings(), getPublishedLegalPage("terms")]);
   if (!product) notFound();
   return (
     <>
@@ -46,6 +48,8 @@ export default async function ProductPage({
         initialLocale={locale}
         contentOverrides={contentOverrides}
         editorialAsset={editorialAsset}
+        storeSettings={storeSettings}
+        termsVersionId={terms?.id ?? null}
       />
     </>
   );

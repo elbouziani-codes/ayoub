@@ -121,7 +121,7 @@ await check("French and Arabic server content, document language, and metadata r
   assert.equal(arabicFont?.as, "font");
 });
 await check("Policy pages render their own canonical and description", async () => {
-  for (const policy of ["shipping", "privacy", "terms"]) {
+  for (const policy of ["legal-notice", "terms", "privacy", "returns", "shipping", "cookies", "contact"]) {
     const result = await request(`/policies/${policy}`);
     assert.equal(result.response.status, 200);
     assert.equal(canonical(result.html), new URL(`/policies/${policy}`, site).href);
